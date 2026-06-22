@@ -2,6 +2,15 @@ import { auth } from '@/lib/auth'
 import sql from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 
+export async function GET() {
+  const rows = await sql`
+    SELECT id, bill_number, bill_date::date AS bill_date, vendor_name, total, status
+    FROM bills
+    ORDER BY bill_date DESC, id DESC
+  `
+  return NextResponse.json(rows)
+}
+
 export async function POST(req: NextRequest) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
