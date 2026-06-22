@@ -73,7 +73,7 @@ export default function NewBillPage() {
           <label className="text-sm text-gray-600 block mb-1.5">Vendor</label>
           <select value={vendorId} onChange={e => setVendorId(e.target.value)}
             className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-base text-gray-900 outline-none focus:ring-2 focus:ring-blue-400">
-            <option value="">Select vendor…</option>
+            <option value="">Select vendorâ€¦</option>
             {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
           </select>
         </div>
@@ -88,7 +88,7 @@ export default function NewBillPage() {
 
         <div className="relative">
           <label className="text-sm text-gray-600 block mb-1.5">Add Item</label>
-          <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search item…"
+          <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search itemâ€¦"
             className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-base text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-400" />
           {results.length > 0 && (
             <ul className="absolute z-20 w-full bg-white border border-gray-300 rounded-xl mt-1 max-h-56 overflow-y-auto shadow-xl">
@@ -134,7 +134,7 @@ export default function NewBillPage() {
 
         <button type="submit" disabled={!lines.length || saving}
           className="w-full bg-orange-600 hover:bg-orange-500 active:bg-orange-700 disabled:opacity-40 text-white font-semibold rounded-xl py-4 text-base transition">
-          {saving ? 'Saving…' : 'Save Bill'}
+          {saving ? 'Savingâ€¦' : 'Save Bill'}
         </button>
       </form>
     </div>

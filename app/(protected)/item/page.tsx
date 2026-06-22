@@ -17,7 +17,7 @@ const EMPTY_FORM = {
 }
 
 function fmt(val: string | null) {
-  if (!val) return '—'
+  if (!val) return 'â€”'
   const n = parseFloat(val)
   return isNaN(n) ? val : n % 1 === 0 ? n.toString() : n.toFixed(2)
 }
@@ -115,7 +115,7 @@ export default function ItemPage() {
     }
   }
 
-  if (loading) return <div className="py-20 text-center text-gray-600">Loading…</div>
+  if (loading) return <div className="py-20 text-center text-gray-600">Loadingâ€¦</div>
 
   return (
     <div className="py-4 space-y-4">
@@ -139,7 +139,7 @@ export default function ItemPage() {
         type="text"
         value={search}
         onChange={e => setSearch(e.target.value)}
-        placeholder="Search items…"
+        placeholder="Search itemsâ€¦"
         className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-base
           text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-400"
       />
@@ -167,7 +167,7 @@ export default function ItemPage() {
           <div className="flex gap-2">
             <button onClick={saveAdd} disabled={adding || !addForm.item_name.trim()}
               className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl py-3 transition">
-              {adding ? 'Saving…' : 'Save Item'}
+              {adding ? 'Savingâ€¦' : 'Save Item'}
             </button>
             <button onClick={() => setShowAdd(false)}
               className="px-4 py-3 rounded-xl bg-gray-100 text-gray-600 text-sm font-semibold">
@@ -191,7 +191,7 @@ export default function ItemPage() {
                 <div className="flex gap-2">
                   <button onClick={saveEdit} disabled={saving}
                     className="flex-1 bg-green-700 hover:bg-green-600 disabled:opacity-40 text-white text-sm font-semibold rounded-xl py-3 transition">
-                    {saving ? 'Saving…' : 'Save'}
+                    {saving ? 'Savingâ€¦' : 'Save'}
                   </button>
                   <button onClick={() => setEditId(null)}
                     className="px-4 py-3 rounded-xl bg-gray-100 text-gray-600 text-sm font-semibold">
@@ -213,9 +213,9 @@ export default function ItemPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm mt-1">
                   <Stat label="SOH" value={Number(item.calculated_soh) % 1 === 0 ? Number(item.calculated_soh).toString() : Number(item.calculated_soh).toFixed(2)} />
-                  <Stat label="Selling Price" value={item.selling_rate ? `GH? ${fmt(item.selling_rate)}` : '—'} />
-                  <Stat label="Cost Price" value={item.purchase_rate ? `GH? ${fmt(item.purchase_rate)}` : '—'} />
-                  <Stat label="Unit" value={item.unit_name ?? '—'} />
+                  <Stat label="Selling Price" value={item.selling_rate ? `GH? ${fmt(item.selling_rate)}` : 'â€”'} />
+                  <Stat label="Cost Price" value={item.purchase_rate ? `GH? ${fmt(item.purchase_rate)}` : 'â€”'} />
+                  <Stat label="Unit" value={item.unit_name ?? 'â€”'} />
                   {item.units_per_pack && <Stat label="Units/Pack" value={fmt(item.units_per_pack)} />}
                 </div>
               </div>
@@ -260,7 +260,7 @@ function ItemForm({
       <div>
         <label className={labelCls}>Group</label>
         <select value={form.cf_group} onChange={set('cf_group')} className={inputCls}>
-          <option value="">— No group —</option>
+          <option value="">â€” No group â€”</option>
           {groups.map(g => <option key={g} value={g}>{g}</option>)}
         </select>
       </div>

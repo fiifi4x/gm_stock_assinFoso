@@ -27,7 +27,7 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
       </div>
 
       <form className="flex gap-2">
-        <input name="q" defaultValue={q} placeholder="Search items…"
+        <input name="q" defaultValue={q} placeholder="Search itemsâ€¦"
           className="flex-1 bg-white border border-gray-300 rounded-xl px-4 py-3 text-base text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-400" />
         <button type="submit"
           className="bg-gray-100 hover:bg-gray-200 text-gray-900 text-sm px-4 py-3 rounded-xl transition">
@@ -45,7 +45,7 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
               className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-4 py-3 active:bg-gray-100">
               <div className="min-w-0 flex-1 pr-3">
                 <p className={`font-medium truncate ${low ? 'text-red-400' : 'text-gray-900'}`}>{r.item_name}</p>
-                <p className="text-gray-400 text-xs mt-0.5">{r.cf_group || '—'}</p>
+                <p className="text-gray-400 text-xs mt-0.5">{r.cf_group || 'â€”'}</p>
               </div>
               <div className="text-right shrink-0">
                 <p className={`text-xl font-bold ${low ? 'text-red-400' : 'text-gray-900'}`}>
@@ -83,11 +83,11 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
                       {r.item_name}
                     </Link>
                   </td>
-                  <td className="px-3 py-2 text-gray-400 text-xs">{r.cf_group || '—'}</td>
+                  <td className="px-3 py-2 text-gray-400 text-xs">{r.cf_group || 'â€”'}</td>
                   <td className="px-3 py-2 text-right text-gray-300">{Number(r.total_purchased).toFixed(0)}</td>
                   <td className="px-3 py-2 text-right text-gray-300">{Number(r.total_sold).toFixed(0)}</td>
                   <td className="px-3 py-2 text-right text-gray-600 text-xs">
-                    {r.last_count_date ? `${String(r.last_count_date).slice(0,10)} (${Number(r.last_count_qty).toFixed(0)})` : '—'}
+                    {r.last_count_date ? `${String(r.last_count_date).slice(0,10)} (${Number(r.last_count_qty).toFixed(0)})` : 'â€”'}
                   </td>
                   <td className={`px-3 py-2 text-right font-bold ${low ? 'text-red-400' : 'text-gray-900'}`}>
                     {soh.toFixed(0)} {low && '?'}

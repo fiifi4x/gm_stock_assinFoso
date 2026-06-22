@@ -66,7 +66,7 @@ function CountCard({
           disabled={saving}
           className="flex-1 bg-green-700 hover:bg-green-600 active:bg-green-800 disabled:opacity-40
             text-white text-sm font-semibold rounded-xl py-3 transition">
-          {saving ? 'Saving…' : `? Same (${soh})`}
+          {saving ? 'Savingâ€¦' : `? Same (${soh})`}
         </button>
         <input
           type="number" min="0" step="any"
@@ -124,7 +124,7 @@ export default function StockCountPage() {
   }
 
   if (loading) return (
-    <div className="py-20 text-center text-gray-600">Loading…</div>
+    <div className="py-20 text-center text-gray-600">Loadingâ€¦</div>
   )
 
   const items = tab === 'daily' ? dailyItems : overdueItems

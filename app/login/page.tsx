@@ -24,7 +24,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Grony</h1>
-          <p className="text-gray-600 mt-1 text-sm">Multimedia · Assin Fosu</p>
+          <p className="text-gray-600 mt-1 text-sm">Multimedia Â· Assin Fosu</p>
         </div>
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-6 space-y-4 shadow-xl">
           <div>
@@ -49,7 +49,7 @@ export default function LoginPage() {
             type="submit" disabled={loading}
             className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold rounded-lg py-3 text-sm transition"
           >
-            {loading ? 'Signing in…' : 'Sign in'}
+            {loading ? 'Signing inâ€¦' : 'Sign in'}
           </button>
         </form>
       </div>

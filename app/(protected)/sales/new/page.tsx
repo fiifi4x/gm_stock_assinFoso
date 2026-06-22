@@ -83,7 +83,7 @@ export default function NewReceiptPage() {
         <div className="relative">
           <label className="text-sm text-gray-600 block mb-1.5">Add Item</label>
           <input value={query} onChange={e => setQuery(e.target.value)}
-            placeholder="Search item name or group…"
+            placeholder="Search item name or groupâ€¦"
             className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-base text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-400" />
           {results.length > 0 && (
             <ul className="absolute z-20 w-full bg-white border border-gray-300 rounded-xl mt-1 max-h-56 overflow-y-auto shadow-xl">
@@ -137,7 +137,7 @@ export default function NewReceiptPage() {
 
         <button type="submit" disabled={!lines.length || saving}
           className="w-full bg-green-600 hover:bg-green-500 active:bg-green-700 disabled:opacity-40 text-white font-semibold rounded-xl py-4 text-base transition">
-          {saving ? 'Saving…' : 'Save Receipt'}
+          {saving ? 'Savingâ€¦' : 'Save Receipt'}
         </button>
       </form>
     </div>
