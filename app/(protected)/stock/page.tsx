@@ -17,24 +17,49 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
   `
 
   return (
-    <div className="py-6 space-y-4">
+    <div className="py-4 space-y-4">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-xl font-bold">Stock Summary</h1>
         <Link href="/stock/count"
-          className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition">
-          + Stock Count
+          className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition">
+          + Count
         </Link>
       </div>
 
       <form className="flex gap-2">
-        <input name="q" defaultValue={q} placeholder="Search items or group…"
-          className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-blue-500" />
-        <button type="submit" className="bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-lg transition">
+        <input name="q" defaultValue={q} placeholder="Search items…"
+          className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-base text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-blue-500" />
+        <button type="submit"
+          className="bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-3 rounded-xl transition">
           Search
         </button>
       </form>
 
-      <div className="overflow-x-auto rounded-xl border border-gray-800">
+      {/* Mobile: card list */}
+      <div className="md:hidden space-y-2">
+        {rows.map((r: any) => {
+          const soh = Number(r.calculated_soh)
+          const low = soh < 5
+          return (
+            <Link key={r.item_id} href={`/stock/${r.item_id}`}
+              className="flex items-center justify-between bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 active:bg-gray-800">
+              <div className="min-w-0 flex-1 pr-3">
+                <p className={`font-medium truncate ${low ? 'text-red-400' : 'text-white'}`}>{r.item_name}</p>
+                <p className="text-gray-500 text-xs mt-0.5">{r.cf_group || '—'}</p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className={`text-xl font-bold ${low ? 'text-red-400' : 'text-white'}`}>
+                  {soh.toFixed(0)}{low ? ' ⚠' : ''}
+                </p>
+                <p className="text-gray-500 text-xs">SOH</p>
+              </div>
+            </Link>
+          )
+        })}
+      </div>
+
+      {/* Desktop: full table */}
+      <div className="hidden md:block overflow-x-auto rounded-xl border border-gray-800">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-900 text-gray-400 text-xs uppercase">

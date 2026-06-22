@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
@@ -56,44 +56,43 @@ export default function NewReceiptPage() {
 
   if (done) return (
     <div className="py-20 text-center">
-      <p className="text-4xl mb-3">âœ…</p>
-      <p className="text-white font-semibold">Receipt {done} saved!</p>
+      <p className="text-5xl mb-4">✅</p>
+      <p className="text-white font-semibold text-lg">Receipt {done} saved!</p>
     </div>
   )
 
   return (
-    <div className="py-6 max-w-lg space-y-5">
+    <div className="py-4 max-w-lg space-y-4">
       <h1 className="text-xl font-bold">New Sales Receipt</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-4">
           <div>
-            <label className="text-sm text-gray-400 block mb-1">Date</label>
+            <label className="text-sm text-gray-400 block mb-1.5">Date</label>
             <input type="date" value={date} onChange={e => setDate(e.target.value)}
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white outline-none focus:ring-2 focus:ring-blue-500" />
+              className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-base text-white outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
-            <label className="text-sm text-gray-400 block mb-1">Cash Counted (GHS)</label>
+            <label className="text-sm text-gray-400 block mb-1.5">Cash Counted (GHS)</label>
             <input type="number" step="0.01" value={cashCounted} onChange={e => setCashCounted(e.target.value)}
-              placeholder="0.00"
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-blue-500" />
+              placeholder="0.00" inputMode="decimal"
+              className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-base text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
         </div>
 
-        {/* Item search */}
         <div className="relative">
-          <label className="text-sm text-gray-400 block mb-1">Add Item</label>
+          <label className="text-sm text-gray-400 block mb-1.5">Add Item</label>
           <input value={query} onChange={e => setQuery(e.target.value)}
-            placeholder="Search item name or groupâ€¦"
-            className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-blue-500" />
+            placeholder="Search item name or group…"
+            className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-base text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-blue-500" />
           {results.length > 0 && (
-            <ul className="absolute z-20 w-full bg-gray-900 border border-gray-700 rounded-lg mt-1 max-h-56 overflow-y-auto shadow-xl">
+            <ul className="absolute z-20 w-full bg-gray-900 border border-gray-700 rounded-xl mt-1 max-h-56 overflow-y-auto shadow-xl">
               {results.map(item => (
                 <li key={item.id}>
                   <button type="button" onClick={() => addItem(item)}
-                    className="w-full text-left px-4 py-2.5 hover:bg-gray-800 text-sm transition">
-                    <span className="text-white">{item.name}</span>
-                    <span className="text-gray-500 ml-2 text-xs">{item.group}</span>
+                    className="w-full text-left px-4 py-3 hover:bg-gray-800 transition">
+                    <span className="text-white text-base">{item.name}</span>
+                    <span className="text-gray-500 ml-2 text-sm">{item.group}</span>
                   </button>
                 </li>
               ))}
@@ -101,46 +100,46 @@ export default function NewReceiptPage() {
           )}
         </div>
 
-        {/* Lines */}
         {lines.length > 0 && (
           <div className="space-y-2">
-            <label className="text-sm text-gray-400">Items</label>
             {lines.map((l, i) => (
-              <div key={i} className="bg-gray-900 border border-gray-700 rounded-lg p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-white font-medium">{l.item.name}</span>
-                  <button type="button" onClick={() => removeLine(i)} className="text-gray-500 hover:text-red-400 text-xs">Remove</button>
+              <div key={i} className="bg-gray-900 border border-gray-700 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-white font-medium">{l.item.name}</span>
+                  <button type="button" onClick={() => removeLine(i)}
+                    className="text-gray-500 hover:text-red-400 text-sm px-2 py-1">Remove</button>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="text-xs text-gray-500">Qty</label>
+                    <label className="text-xs text-gray-500 block mb-1">Qty</label>
                     <input type="number" min="0.01" step="any" value={l.qty}
                       onChange={e => updateLine(i, 'qty', Number(e.target.value))}
-                      className="w-full bg-gray-800 rounded px-2 py-1.5 text-sm text-white outline-none mt-0.5" />
+                      inputMode="decimal"
+                      className="w-full bg-gray-800 rounded-lg px-3 py-2.5 text-base text-white outline-none" />
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500">Unit Price</label>
+                    <label className="text-xs text-gray-500 block mb-1">Unit Price</label>
                     <input type="number" min="0" step="0.01" value={l.price}
                       onChange={e => updateLine(i, 'price', Number(e.target.value))}
-                      className="w-full bg-gray-800 rounded px-2 py-1.5 text-sm text-white outline-none mt-0.5" />
+                      inputMode="decimal"
+                      className="w-full bg-gray-800 rounded-lg px-3 py-2.5 text-base text-white outline-none" />
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500">Total</label>
-                    <p className="text-sm text-white mt-1.5 font-medium">GHS {(l.qty * l.price).toFixed(2)}</p>
+                    <label className="text-xs text-gray-500 block mb-1">Total</label>
+                    <p className="text-base text-white font-medium py-2.5">GHS {(l.qty * l.price).toFixed(2)}</p>
                   </div>
                 </div>
               </div>
             ))}
-            <div className="text-right text-white font-bold text-lg">Total: GHS {total.toFixed(2)}</div>
+            <div className="text-right text-white font-bold text-xl py-1">Total: GHS {total.toFixed(2)}</div>
           </div>
         )}
 
         <button type="submit" disabled={!lines.length || saving}
-          className="w-full bg-green-600 hover:bg-green-500 disabled:opacity-40 text-white font-semibold rounded-lg py-3 text-sm transition">
-          {saving ? 'Savingâ€¦' : 'Save Receipt'}
+          className="w-full bg-green-600 hover:bg-green-500 active:bg-green-700 disabled:opacity-40 text-white font-semibold rounded-xl py-4 text-base transition">
+          {saving ? 'Saving…' : 'Save Receipt'}
         </button>
       </form>
     </div>
   )
 }
-

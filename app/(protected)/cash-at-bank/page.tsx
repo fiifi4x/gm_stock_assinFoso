@@ -5,7 +5,7 @@ import sql from '@/lib/db'
 export default async function CashAtBankPage() {
   const session = await auth()
   const role = (session?.user as any)?.role
-  if (role === 'staff') redirect('/')
+  if (role === 'staff') redirect('/dashboard')
 
   const rows = await sql`
     SELECT entry_date, cash_counted, grony_personal_cash_in, debtors_cash_in,
@@ -18,14 +18,49 @@ export default async function CashAtBankPage() {
   `
 
   const fmt = (n: any) => n == null ? '—' : `GHS ${Number(n).toLocaleString('en-GH', { minimumFractionDigits: 2 })}`
-  const fmtShort = (n: any) => n == null ? '—' : Number(n).toLocaleString('en-GH', { minimumFractionDigits: 0 })
+  const n = (v: any) => v == null ? '—' : Number(v).toLocaleString('en-GH', { minimumFractionDigits: 0 })
+  const nz = (v: any) => (v == null || Number(v) === 0) ? '' : n(v)
 
   return (
-    <div className="py-6 space-y-4">
-      <h1 className="text-xl font-bold">Cash at Bank</h1>
-      <p className="text-sm text-gray-400">Last 90 days · most recent first. Confirmation rows highlighted in blue.</p>
+    <div className="py-4 space-y-4">
+      <div>
+        <h1 className="text-xl font-bold">Cash at Bank</h1>
+        <p className="text-sm text-gray-400 mt-0.5">Last 90 days · most recent first</p>
+      </div>
 
-      <div className="overflow-x-auto rounded-xl border border-gray-800">
+      {/* Mobile: card list showing essentials */}
+      <div className="md:hidden space-y-2">
+        {rows.map((r: any) => {
+          const hasConfirm = r.cab_total != null
+          const net = Number(r.daily_net)
+          return (
+            <div key={r.entry_date}
+              className={`rounded-xl border p-4 space-y-2 ${hasConfirm ? 'bg-blue-950/40 border-blue-800' : 'bg-gray-900 border-gray-800'}`}>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400 text-sm">{String(r.entry_date).slice(0,10)}</span>
+                <span className="text-white font-bold text-lg">{n(r.running_cash_at_bank)}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">Counted: <span className="text-gray-300">{nz(r.cash_counted) || '—'}</span></span>
+                <span className={net >= 0 ? 'text-green-400' : 'text-red-400'}>Net: {n(r.daily_net)}</span>
+              </div>
+              {hasConfirm && (
+                <div className="flex items-center justify-between text-sm pt-1 border-t border-blue-800">
+                  <span className="text-blue-400">Confirmed: {n(r.cab_total)}</span>
+                  {r.deficit != null && (
+                    <span className={Number(r.deficit) < 0 ? 'text-red-400' : 'text-green-400'}>
+                      Diff: {n(r.deficit)}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Desktop: full table */}
+      <div className="hidden md:block overflow-x-auto rounded-xl border border-gray-800">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-900 text-gray-400 text-xs uppercase">
@@ -49,19 +84,19 @@ export default async function CashAtBankPage() {
                 <tr key={r.entry_date}
                   className={`border-t border-gray-800 ${hasConfirm ? 'bg-blue-950/40' : 'hover:bg-gray-900/50'}`}>
                   <td className="px-3 py-2 text-gray-300 whitespace-nowrap">{String(r.entry_date).slice(0,10)}</td>
-                  <td className="px-3 py-2 text-right text-gray-300">{fmtShort(r.cash_counted)}</td>
-                  <td className="px-3 py-2 text-right text-green-400">{fmtShort(r.grony_personal_cash_in) === '0' ? '' : fmtShort(r.grony_personal_cash_in)}</td>
-                  <td className="px-3 py-2 text-right text-green-400">{fmtShort(r.debtors_cash_in) === '0' ? '' : fmtShort(r.debtors_cash_in)}</td>
-                  <td className="px-3 py-2 text-right text-red-400">{fmtShort(r.bills) === '0' ? '' : fmtShort(r.bills)}</td>
-                  <td className="px-3 py-2 text-right text-red-400">{fmtShort(r.expenses) === '0' ? '' : fmtShort(r.expenses)}</td>
-                  <td className="px-3 py-2 text-right text-orange-400">{fmtShort(r.grony_personal_expenses) === '0' ? '' : fmtShort(r.grony_personal_expenses)}</td>
+                  <td className="px-3 py-2 text-right text-gray-300">{nz(r.cash_counted) || '—'}</td>
+                  <td className="px-3 py-2 text-right text-green-400">{nz(r.grony_personal_cash_in)}</td>
+                  <td className="px-3 py-2 text-right text-green-400">{nz(r.debtors_cash_in)}</td>
+                  <td className="px-3 py-2 text-right text-red-400">{nz(r.bills)}</td>
+                  <td className="px-3 py-2 text-right text-red-400">{nz(r.expenses)}</td>
+                  <td className="px-3 py-2 text-right text-orange-400">{nz(r.grony_personal_expenses)}</td>
                   <td className={`px-3 py-2 text-right font-medium ${Number(r.daily_net) >= 0 ? 'text-white' : 'text-red-400'}`}>
-                    {fmtShort(r.daily_net)}
+                    {n(r.daily_net)}
                   </td>
-                  <td className="px-3 py-2 text-right font-bold text-white">{fmtShort(r.running_cash_at_bank)}</td>
-                  <td className="px-3 py-2 text-right text-blue-300">{hasConfirm ? fmtShort(r.cab_total) : ''}</td>
+                  <td className="px-3 py-2 text-right font-bold text-white">{n(r.running_cash_at_bank)}</td>
+                  <td className="px-3 py-2 text-right text-blue-300">{hasConfirm ? n(r.cab_total) : ''}</td>
                   <td className={`px-3 py-2 text-right font-medium ${r.deficit != null && Number(r.deficit) < 0 ? 'text-red-400' : 'text-green-400'}`}>
-                    {r.deficit != null ? fmtShort(r.deficit) : ''}
+                    {r.deficit != null ? n(r.deficit) : ''}
                   </td>
                 </tr>
               )
