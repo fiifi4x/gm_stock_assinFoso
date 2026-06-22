@@ -35,20 +35,20 @@ function CountCard({
   const overdue = item.days_overdue
   const badgeClass =
     overdue === null || overdue === 0
-      ? 'bg-orange-900/60 text-orange-300'
+      ? 'bg-orange-100 text-orange-600'
       : overdue <= 2
-      ? 'bg-yellow-900/60 text-yellow-300'
-      : 'bg-red-900/60 text-red-300'
+      ? 'bg-yellow-100 text-yellow-700'
+      : 'bg-red-100 text-red-600'
   const badgeLabel =
     overdue === null ? 'Never counted' : overdue === 0 ? 'Not today' : `${overdue}d overdue`
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
+    <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-white font-medium leading-snug">{item.item_name}</p>
+          <p className="text-gray-900 font-medium leading-snug">{item.item_name}</p>
           {item.cf_group && (
-            <p className="text-gray-500 text-xs mt-0.5">{item.cf_group}</p>
+            <p className="text-gray-400 text-xs mt-0.5">{item.cf_group}</p>
           )}
         </div>
         <span className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full ${badgeClass}`}>
@@ -56,8 +56,8 @@ function CountCard({
         </span>
       </div>
 
-      <p className="text-sm text-gray-400">
-        Stock on hand: <span className="text-white font-semibold text-base">{soh}</span>
+      <p className="text-sm text-gray-600">
+        Stock on hand: <span className="text-gray-900 font-semibold text-base">{soh}</span>
       </p>
 
       <div className="flex items-center gap-2">
@@ -66,7 +66,7 @@ function CountCard({
           disabled={saving}
           className="flex-1 bg-green-700 hover:bg-green-600 active:bg-green-800 disabled:opacity-40
             text-white text-sm font-semibold rounded-xl py-3 transition">
-          {saving ? 'Saving…' : `✓ Same (${soh})`}
+          {saving ? 'Saving�' : `? Same (${soh})`}
         </button>
         <input
           type="number" min="0" step="any"
@@ -74,9 +74,9 @@ function CountCard({
           onChange={e => setCustomQty(e.target.value)}
           placeholder="New qty"
           inputMode="decimal"
-          className="w-24 bg-gray-800 border border-gray-700 rounded-xl px-2 py-3
-            text-base text-white placeholder-gray-600 outline-none
-            focus:ring-2 focus:ring-blue-500 text-center"
+          className="w-24 bg-gray-100 border border-gray-300 rounded-xl px-2 py-3
+            text-base text-gray-900 placeholder-gray-400 outline-none
+            focus:ring-2 focus:ring-blue-400 text-center"
         />
         <button
           onClick={() => { if (customQty !== '') submit(Number(customQty)) }}
@@ -93,8 +93,8 @@ function CountCard({
 function EmptyState({ label }: { label: string }) {
   return (
     <div className="py-20 text-center space-y-3">
-      <p className="text-5xl">✅</p>
-      <p className="text-white font-semibold text-lg">{label}</p>
+      <p className="text-5xl">?</p>
+      <p className="text-gray-900 font-semibold text-lg">{label}</p>
     </div>
   )
 }
@@ -124,7 +124,7 @@ export default function StockCountPage() {
   }
 
   if (loading) return (
-    <div className="py-20 text-center text-gray-400">Loading…</div>
+    <div className="py-20 text-center text-gray-600">Loading�</div>
   )
 
   const items = tab === 'daily' ? dailyItems : overdueItems
@@ -134,22 +134,22 @@ export default function StockCountPage() {
       {/* Header */}
       <div>
         <h1 className="text-xl font-bold">Stock Count</h1>
-        <p className="text-sm text-gray-400 mt-0.5">
+        <p className="text-sm text-gray-600 mt-0.5">
           {dailyItems.length + overdueItems.length} item{dailyItems.length + overdueItems.length !== 1 ? 's' : ''} pending
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex bg-gray-900 rounded-xl p-1 gap-1">
+      <div className="flex bg-white rounded-xl p-1 gap-1">
         <button
           onClick={() => setTab('daily')}
           className={`flex-1 py-2 rounded-lg text-sm font-semibold transition
             ${tab === 'daily'
               ? 'bg-blue-600 text-white'
-              : 'text-gray-400 hover:text-gray-200'}`}>
+              : 'text-gray-600 hover:text-gray-700'}`}>
           Daily
           {dailyItems.length > 0 && (
-            <span className="ml-1.5 bg-blue-500/30 text-blue-300 text-xs px-1.5 py-0.5 rounded-full">
+            <span className="ml-1.5 bg-blue-100 text-blue-600 text-xs px-1.5 py-0.5 rounded-full">
               {dailyItems.length}
             </span>
           )}
@@ -159,10 +159,10 @@ export default function StockCountPage() {
           className={`flex-1 py-2 rounded-lg text-sm font-semibold transition
             ${tab === '15day'
               ? 'bg-blue-600 text-white'
-              : 'text-gray-400 hover:text-gray-200'}`}>
+              : 'text-gray-600 hover:text-gray-700'}`}>
           15-Day
           {overdueItems.length > 0 && (
-            <span className="ml-1.5 bg-blue-500/30 text-blue-300 text-xs px-1.5 py-0.5 rounded-full">
+            <span className="ml-1.5 bg-blue-100 text-blue-600 text-xs px-1.5 py-0.5 rounded-full">
               {overdueItems.length}
             </span>
           )}
@@ -188,3 +188,4 @@ export default function StockCountPage() {
     </div>
   )
 }
+

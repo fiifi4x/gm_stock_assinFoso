@@ -20,26 +20,26 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white">Grony</h1>
-          <p className="text-gray-400 mt-1 text-sm">Multimedia Â· Assin Fosu</p>
+          <h1 className="text-3xl font-bold text-gray-900">Grony</h1>
+          <p className="text-gray-600 mt-1 text-sm">Multimedia · Assin Fosu</p>
         </div>
-        <form onSubmit={handleSubmit} className="bg-gray-900 rounded-2xl p-6 space-y-4 shadow-xl">
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-6 space-y-4 shadow-xl">
           <div>
-            <label className="text-sm text-gray-400 block mb-1">Username</label>
+            <label className="text-sm text-gray-600 block mb-1">Username</label>
             <input
-              className="w-full bg-gray-800 text-white rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-gray-100 text-gray-900 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-400"
               value={username} onChange={e => setUsername(e.target.value)}
               autoComplete="username" autoFocus
             />
           </div>
           <div>
-            <label className="text-sm text-gray-400 block mb-1">Password</label>
+            <label className="text-sm text-gray-600 block mb-1">Password</label>
             <input
               type="password"
-              className="w-full bg-gray-800 text-white rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-gray-100 text-gray-900 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-400"
               value={password} onChange={e => setPassword(e.target.value)}
               autoComplete="current-password"
             />
@@ -49,10 +49,11 @@ export default function LoginPage() {
             type="submit" disabled={loading}
             className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold rounded-lg py-3 text-sm transition"
           >
-            {loading ? 'Signing inâ€¦' : 'Sign in'}
+            {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
       </div>
     </div>
   )
 }
+

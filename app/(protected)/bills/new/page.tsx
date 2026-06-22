@@ -53,8 +53,8 @@ export default function NewBillPage() {
 
   if (done) return (
     <div className="py-20 text-center">
-      <p className="text-5xl mb-4">âœ…</p>
-      <p className="text-white font-semibold text-lg">Bill saved!</p>
+      <p className="text-5xl mb-4">?</p>
+      <p className="text-gray-900 font-semibold text-lg">Bill saved!</p>
     </div>
   )
 
@@ -64,40 +64,40 @@ export default function NewBillPage() {
       <form onSubmit={handleSubmit} className="space-y-4">
 
         <div>
-          <label className="text-sm text-gray-400 block mb-1.5">Date</label>
+          <label className="text-sm text-gray-600 block mb-1.5">Date</label>
           <input type="date" value={date} onChange={e => setDate(e.target.value)}
-            className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-base text-white outline-none focus:ring-2 focus:ring-blue-500" />
+            className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-base text-gray-900 outline-none focus:ring-2 focus:ring-blue-400" />
         </div>
 
         <div>
-          <label className="text-sm text-gray-400 block mb-1.5">Vendor</label>
+          <label className="text-sm text-gray-600 block mb-1.5">Vendor</label>
           <select value={vendorId} onChange={e => setVendorId(e.target.value)}
-            className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-base text-white outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="">Select vendorâ€¦</option>
+            className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-base text-gray-900 outline-none focus:ring-2 focus:ring-blue-400">
+            <option value="">Select vendor…</option>
             {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
           </select>
         </div>
 
         {!vendorId && (
           <div>
-            <label className="text-sm text-gray-400 block mb-1.5">Or enter vendor name</label>
+            <label className="text-sm text-gray-600 block mb-1.5">Or enter vendor name</label>
             <input value={vendorName} onChange={e => setVendorName(e.target.value)} placeholder="Vendor name"
-              className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-base text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-blue-500" />
+              className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-base text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
         )}
 
         <div className="relative">
-          <label className="text-sm text-gray-400 block mb-1.5">Add Item</label>
-          <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search itemâ€¦"
-            className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-base text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-blue-500" />
+          <label className="text-sm text-gray-600 block mb-1.5">Add Item</label>
+          <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search item…"
+            className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-base text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-400" />
           {results.length > 0 && (
-            <ul className="absolute z-20 w-full bg-gray-900 border border-gray-700 rounded-xl mt-1 max-h-56 overflow-y-auto shadow-xl">
+            <ul className="absolute z-20 w-full bg-white border border-gray-300 rounded-xl mt-1 max-h-56 overflow-y-auto shadow-xl">
               {results.map(item => (
                 <li key={item.id}>
                   <button type="button" onClick={() => addItem(item)}
-                    className="w-full text-left px-4 py-3 hover:bg-gray-800 transition">
-                    <span className="text-white text-base">{item.name}</span>
-                    <span className="text-gray-500 ml-2 text-sm">{item.group}</span>
+                    className="w-full text-left px-4 py-3 hover:bg-gray-100 transition">
+                    <span className="text-gray-900 text-base">{item.name}</span>
+                    <span className="text-gray-400 ml-2 text-sm">{item.group}</span>
                   </button>
                 </li>
               ))}
@@ -106,37 +106,38 @@ export default function NewBillPage() {
         </div>
 
         {lines.map((l, i) => (
-          <div key={i} className="bg-gray-900 border border-gray-700 rounded-xl p-4">
+          <div key={i} className="bg-white border border-gray-300 rounded-xl p-4">
             <div className="flex justify-between mb-3">
-              <span className="text-white font-medium">{l.item.name}</span>
+              <span className="text-gray-900 font-medium">{l.item.name}</span>
               <button type="button" onClick={() => removeLine(i)}
-                className="text-gray-500 hover:text-red-400 text-sm px-2 py-1">Remove</button>
+                className="text-gray-400 hover:text-red-400 text-sm px-2 py-1">Remove</button>
             </div>
             <div className="grid grid-cols-3 gap-3">
               {(['qty', 'price'] as const).map(f => (
                 <div key={f}>
-                  <label className="text-xs text-gray-500 block mb-1">{f === 'price' ? 'Unit Price' : 'Qty'}</label>
+                  <label className="text-xs text-gray-400 block mb-1">{f === 'price' ? 'Unit Price' : 'Qty'}</label>
                   <input type="number" min="0" step="any" value={l[f]}
                     onChange={e => updateLine(i, f, Number(e.target.value))}
                     inputMode="decimal"
-                    className="w-full bg-gray-800 rounded-lg px-3 py-2.5 text-base text-white outline-none" />
+                    className="w-full bg-gray-100 rounded-lg px-3 py-2.5 text-base text-gray-900 outline-none" />
                 </div>
               ))}
               <div>
-                <label className="text-xs text-gray-500 block mb-1">Total</label>
-                <p className="text-base text-white font-medium py-2.5">GHS {(l.qty * l.price).toFixed(2)}</p>
+                <label className="text-xs text-gray-400 block mb-1">Total</label>
+                <p className="text-base text-gray-900 font-medium py-2.5">GHS {(l.qty * l.price).toFixed(2)}</p>
               </div>
             </div>
           </div>
         ))}
 
-        {lines.length > 0 && <div className="text-right text-white font-bold text-xl py-1">Total: GHS {total.toFixed(2)}</div>}
+        {lines.length > 0 && <div className="text-right text-gray-900 font-bold text-xl py-1">Total: GHS {total.toFixed(2)}</div>}
 
         <button type="submit" disabled={!lines.length || saving}
           className="w-full bg-orange-600 hover:bg-orange-500 active:bg-orange-700 disabled:opacity-40 text-white font-semibold rounded-xl py-4 text-base transition">
-          {saving ? 'Savingâ€¦' : 'Save Bill'}
+          {saving ? 'Saving…' : 'Save Bill'}
         </button>
       </form>
     </div>
   )
 }
+
