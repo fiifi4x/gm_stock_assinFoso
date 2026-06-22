@@ -21,7 +21,9 @@ export async function GET() {
     ) c ON c.item_id = s.item_id
     WHERE s.item_id NOT IN (367, 368, 369, 370, 371, 372, 373, 374, 375, 376)
       AND s.item_name NOT ILIKE 'old stop%'
+      AND s.item_name NOT ILIKE 'old- stop%'
       AND s.item_name NOT ILIKE 'service%'
+      AND s.item_name NOT ILIKE 'service-%'
       AND (c.last_count_date IS NULL
        OR c.last_count_date::date < CURRENT_DATE - INTERVAL '15 days')
     ORDER BY
