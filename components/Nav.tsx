@@ -67,6 +67,16 @@ export default function Nav({ user }: { user: NavUser }) {
               <p className="text-xs text-gray-400 capitalize">{user.role}</p>
             </div>
             <div className="p-4 space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <Link href="/staff-times?action=in" onClick={() => setOpen(false)}
+                  className="block text-sm font-semibold text-white bg-green-600 hover:bg-green-500 rounded-xl py-3 text-center transition">
+                  Time In
+                </Link>
+                <Link href="/staff-times?action=out" onClick={() => setOpen(false)}
+                  className="block text-sm font-semibold text-white bg-orange-500 hover:bg-orange-400 rounded-xl py-3 text-center transition">
+                  Time Out
+                </Link>
+              </div>
               <Link href="/profile" onClick={() => setOpen(false)}
                 className="block w-full text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl py-3 text-center transition">
                 My Profile

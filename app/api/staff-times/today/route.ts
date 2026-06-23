@@ -1,0 +1,80 @@
+import { auth } from '@/lib/auth'
+import sql from '@/lib/db'
+import { NextRequest, NextResponse } from 'next/server'
+
+export async function GET() {
+  const session = await auth()
+  const sessionUser = session?.user as any
+  if (!sessionUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const today = new Date().toISOString().slice(0, 10)
+
+  // All staff times for today
+  const todayRows = await sql`
+    SELECT staff_name, actual_in, actual_out
+    FROM staff_times
+    WHERE work_date = ${today}
+    ORDER BY staff_name
+  `
+
+  // Current user's today entry
+  const username = sessionUser.username ?? sessionUser.name
+  const [mine] = await sql`
+    SELECT actual_in, actual_out FROM staff_times
+    WHERE staff_name = ${username} AND work_date = ${today}
+  `
+
+  // Recent 14 days timetable for all staff
+  const recent = await sql`
+    SELECT staff_name, work_date::text, actual_in, actual_out
+    FROM staff_times
+    WHERE work_date >= (CURRENT_DATE - INTERVAL '14 days')
+    ORDER BY work_date DESC, staff_name
+  `
+
+  return NextResponse.json({ today: todayRows, mine: mine ?? null, recent })
+}
+
+export async function POST(req: NextRequest) {
+  const session = await auth()
+  const sessionUser = session?.user as any
+  if (!sessionUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { action, time } = await req.json()
+  if (!action || !time) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+  if (!['in', 'out'].includes(action)) return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+
+  const username = sessionUser.username ?? sessionUser.name
+  const today = new Date().toISOString().slice(0, 10)
+
+  if (action === 'out') {
+    const [existing] = await sql`
+      SELECT actual_in FROM staff_times WHERE staff_name = ${username} AND work_date = ${today}
+    `
+    if (!existing?.actual_in) {
+      return NextResponse.json({ error: 'You must record Time In first' }, { status: 400 })
+    }
+  }
+
+  if (action === 'in') {
+    await sql`
+      INSERT INTO staff_times (staff_name, work_date, actual_in)
+      VALUES (${username}, ${today}, ${time})
+      ON CONFLICT (staff_name, work_date)
+      DO UPDATE SET actual_in = ${time}
+    `
+  } else {
+    await sql`
+      INSERT INTO staff_times (staff_name, work_date, actual_out)
+      VALUES (${username}, ${today}, ${time})
+      ON CONFLICT (staff_name, work_date)
+      DO UPDATE SET actual_out = ${time}
+    `
+  }
+
+  const [updated] = await sql`
+    SELECT actual_in, actual_out FROM staff_times
+    WHERE staff_name = ${username} AND work_date = ${today}
+  `
+  return NextResponse.json(updated)
+}
