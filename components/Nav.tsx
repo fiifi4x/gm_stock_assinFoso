@@ -71,6 +71,12 @@ export default function Nav({ user }: { user: NavUser }) {
                 className="block w-full text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl py-3 text-center transition">
                 My Profile
               </Link>
+              {user.role === 'owner' && (
+                <Link href="/users" onClick={() => setOpen(false)}
+                  className="block w-full text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl py-3 text-center transition">
+                  Users
+                </Link>
+              )}
               <button onClick={() => signOut({ callbackUrl: '/login' })}
                 className="w-full text-sm font-semibold text-red-500 bg-red-50 hover:bg-red-100 rounded-xl py-3 transition">
                 Sign out
