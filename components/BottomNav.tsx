@@ -7,8 +7,8 @@ type Props = { role: string }
 
 const row1Base = [
   { href: '/dashboard', label: 'Home', icon: '?' },
-  { href: '/sales/new', label: 'Receipt', icon: '??' },
-  { href: '/bills/new', label: 'Bill', icon: '??' },
+  { href: '/sales', label: 'Sales', icon: '??' },
+  { href: '/bills', label: 'Bills', icon: '??' },
   { href: '/expenses/new', label: 'Expense', icon: '??' },
 ]
 
@@ -45,7 +45,7 @@ export default function BottomNav({ role }: Props) {
       .catch(() => {})
   }, [])
 
-  const isActive = (href: string) => pathname === href
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
 
   const row1 = [
     ...row1Base,

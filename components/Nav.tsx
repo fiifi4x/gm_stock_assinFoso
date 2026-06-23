@@ -7,8 +7,8 @@ type NavUser = { name?: string | null; role?: string; username?: string }
 
 const allLinks = [
   { href: '/dashboard', label: 'Dashboard', roles: ['owner','manager','staff'] },
-  { href: '/sales/new', label: '+ Receipt', roles: ['owner','manager','staff'] },
-  { href: '/bills/new', label: '+ Bill', roles: ['owner','manager','staff'] },
+  { href: '/sales', label: 'Sales', roles: ['owner','manager','staff'] },
+  { href: '/bills', label: 'Bills', roles: ['owner','manager','staff'] },
   { href: '/expenses/new', label: '+ Expense', roles: ['owner','manager','staff'] },
   { href: '/stock/count', label: 'Count', roles: ['owner','manager','staff'] },
   { href: '/cash-at-bank', label: 'Cash at Bank', roles: ['owner','manager'] },
@@ -31,7 +31,7 @@ export default function Nav({ user }: { user: NavUser }) {
           {links.map(l => (
             <Link key={l.href} href={l.href}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition
-                ${pathname === l.href ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}>
+                ${(pathname === l.href || pathname.startsWith(l.href + '/')) ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}>
               {l.label}
             </Link>
           ))}
