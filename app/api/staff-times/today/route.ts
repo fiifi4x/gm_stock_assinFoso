@@ -24,11 +24,10 @@ export async function GET() {
     WHERE staff_name = ${username} AND work_date = ${today}
   `
 
-  // Recent 14 days timetable for all staff
+  // All records for all staff
   const recent = await sql`
     SELECT staff_name, work_date::text, actual_in, actual_out
     FROM staff_times
-    WHERE work_date >= (CURRENT_DATE - INTERVAL '14 days')
     ORDER BY work_date DESC, staff_name
   `
 
