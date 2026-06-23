@@ -9,7 +9,7 @@ const allLinks = [
   { href: '/dashboard', label: 'Dashboard', roles: ['owner','manager','staff'] },
   { href: '/sales', label: 'Sales', roles: ['owner','manager','staff'] },
   { href: '/bills', label: 'Bills', roles: ['owner','manager','staff'] },
-  { href: '/expenses/new', label: '+ Expense', roles: ['owner','manager','staff'] },
+  { href: '/expenses', label: 'Expenses', roles: ['owner','manager','staff'] },
   { href: '/stock/count', label: 'Count', roles: ['owner','manager','staff'] },
   { href: '/cash-at-bank', label: 'Cash at Bank', roles: ['owner','manager'] },
   { href: '/losses', label: 'Losses', roles: ['owner','manager','staff'] },

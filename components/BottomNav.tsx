@@ -9,7 +9,7 @@ const row1Base = [
   { href: '/dashboard', label: 'Home', icon: '?' },
   { href: '/sales', label: 'Sales', icon: '??' },
   { href: '/bills', label: 'Bills', icon: '??' },
-  { href: '/expenses/new', label: 'Expense', icon: '??' },
+  { href: '/expenses', label: 'Expenses', icon: '??' },
 ]
 
 const row2All = [

@@ -2,18 +2,51 @@ import { auth } from '@/lib/auth'
 import sql from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 
+export async function GET() {
+  const rows = await sql`
+    SELECT
+      e.id, e.expense_date::date AS expense_date, e.expense_account,
+      e.cf_justify, e.vendor_name, e.amount, e.cf_expense_type,
+      e.is_property, COALESCE(ep.property_status, 'at_shop') AS property_status
+    FROM expenses e
+    LEFT JOIN expense_properties ep ON ep.expense_id = e.id
+    ORDER BY e.expense_date DESC, e.id DESC
+  `
+  return NextResponse.json(rows)
+}
+
 export async function POST(req: NextRequest) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { date, description, account, amount } = await req.json()
-  if (!date || !description || !amount) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+  const { expense_date, expense_account, cf_justify, vendor_name, amount, cf_expense_type, is_property } = await req.json()
+  if (!expense_date || !expense_account || !amount) {
+    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+  }
 
-  const entryNumber = `APP-EXP-${date.replace(/-/g,'')}-${Date.now().toString().slice(-4)}`
-  await sql`
-    INSERT INTO expenses (entry_number, expense_date, description, expense_account, amount, total, source)
-    VALUES (${entryNumber}, ${date}, ${description}, ${account}, ${amount}, ${amount}, 'app')
+  const entry = await sql`
+    SELECT COALESCE(MAX(entry_number::int), 0) + 1 AS next FROM expenses WHERE entry_number ~ '^[0-9]+$'
   `
-  await sql`INSERT INTO cash_at_bank (entry_date) VALUES (${date}) ON CONFLICT (entry_date) DO NOTHING`
-  return NextResponse.json({ ok: true })
+  const entryNumber = String(entry[0].next)
+  const isProp = is_property ?? false
+
+  const [row] = await sql`
+    INSERT INTO expenses (expense_date, expense_account, cf_justify, vendor_name, amount, total,
+                          cf_expense_type, is_property, source, entry_number)
+    VALUES (${expense_date}, ${expense_account}, ${cf_justify ?? null}, ${vendor_name ?? null},
+            ${amount}, ${amount}, ${cf_expense_type ?? null}, ${isProp}, 'app', ${entryNumber})
+    RETURNING id, expense_date::date AS expense_date, expense_account, cf_justify,
+              vendor_name, amount, cf_expense_type, is_property
+  `
+
+  if (isProp) {
+    await sql`
+      INSERT INTO expense_properties (expense_id, property_status)
+      VALUES (${row.id}, 'at_shop') ON CONFLICT (expense_id) DO NOTHING
+    `
+  }
+
+  await sql`INSERT INTO cash_at_bank (entry_date) VALUES (${expense_date}) ON CONFLICT (entry_date) DO NOTHING`
+
+  return NextResponse.json({ ...row, property_status: isProp ? 'at_shop' : null })
 }
