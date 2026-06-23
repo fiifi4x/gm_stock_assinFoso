@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
+import { fmtDate } from '@/lib/fmtDate'
 
 type Expense = {
   id: number
@@ -15,9 +16,6 @@ type Expense = {
 
 type Tab = 'all' | 'properties' | 'at_shop' | 'away'
 
-function fmtDate(d: string) {
-  return new Date(d).toLocaleDateString('en-GH', { day: '2-digit', month: 'short', year: 'numeric' })
-}
 
 function fmtAmt(val: string) {
   const n = parseFloat(val)

@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { fmtDate } from '@/lib/fmtDate'
 
 type Bill = {
   id: number
@@ -25,9 +26,6 @@ function fmt(val: string | null) {
   return isNaN(n) ? val : `GH₵ ${n.toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-function fmtDate(d: string) {
-  return new Date(d).toLocaleDateString('en-GH', { day: '2-digit', month: 'short', year: 'numeric' })
-}
 
 function statusBadge(status: string) {
   const s = status.toLowerCase()

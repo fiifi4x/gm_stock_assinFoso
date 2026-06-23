@@ -1,6 +1,7 @@
 import sql from '@/lib/db'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { fmtDate } from '@/lib/fmtDate'
 
 export default async function ItemHistoryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -43,7 +44,7 @@ export default async function ItemHistoryPage({ params }: { params: Promise<{ id
       {s.last_count_date && (
         <div className="bg-blue-950 border border-blue-800 rounded-xl p-4 text-sm">
           <span className="text-blue-400 font-medium">Last physical count:</span>
-          <span className="text-white ml-2">{String(s.last_count_date).slice(0,10)}</span>
+          <span className="text-white ml-2">{fmtDate(String(s.last_count_date).slice(0,10))}</span>
           <span className="text-gray-400 ml-2">— {Number(s.last_count_qty).toFixed(0)} units</span>
         </div>
       )}
@@ -65,7 +66,7 @@ export default async function ItemHistoryPage({ params }: { params: Promise<{ id
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <p className="text-gray-400 text-sm">{String(t.txn_date).slice(0,10)}</p>
+              <p className="text-gray-400 text-sm">{fmtDate(String(t.txn_date).slice(0,10))}</p>
               {t.line_total != null && (
                 <p className="text-gray-300 text-sm">GHS {Number(t.line_total).toFixed(2)}</p>
               )}
@@ -91,7 +92,7 @@ export default async function ItemHistoryPage({ params }: { params: Promise<{ id
           <tbody>
             {txns.map((t: any, i: number) => (
               <tr key={i} className={`border-t border-gray-800 ${t.txn_type === 'stock_count' ? 'bg-blue-950/30' : 'hover:bg-gray-900/50'}`}>
-                <td className="px-3 py-2 text-gray-300 whitespace-nowrap">{String(t.txn_date).slice(0,10)}</td>
+                <td className="px-3 py-2 text-gray-300 whitespace-nowrap">{fmtDate(String(t.txn_date).slice(0,10))}</td>
                 <td className="px-3 py-2">
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${typeStyle(t.txn_type)}`}>
                     {t.txn_type}

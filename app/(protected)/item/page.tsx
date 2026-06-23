@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import { fmtDate } from '@/lib/fmtDate'
 
 type Item = {
   id: number
@@ -32,9 +33,6 @@ function fmt(val: string | null) {
   return isNaN(n) ? val : n % 1 === 0 ? n.toString() : n.toFixed(2)
 }
 
-function fmtDate(d: string) {
-  return new Date(d).toLocaleDateString('en-GH', { day: '2-digit', month: 'short', year: 'numeric' })
-}
 
 function numVal(val: string | null) { return val ? parseFloat(val) || 0 : 0 }
 

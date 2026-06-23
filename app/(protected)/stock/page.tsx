@@ -1,5 +1,6 @@
 import sql from '@/lib/db'
 import Link from 'next/link'
+import { fmtDate } from '@/lib/fmtDate'
 
 export default async function StockPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const { q } = await searchParams
@@ -87,7 +88,7 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
                   <td className="px-3 py-2 text-right text-gray-300">{Number(r.total_purchased).toFixed(0)}</td>
                   <td className="px-3 py-2 text-right text-gray-300">{Number(r.total_sold).toFixed(0)}</td>
                   <td className="px-3 py-2 text-right text-gray-600 text-xs">
-                    {r.last_count_date ? `${String(r.last_count_date).slice(0,10)} (${Number(r.last_count_qty).toFixed(0)})` : '—'}
+                    {r.last_count_date ? `${fmtDate(String(r.last_count_date).slice(0,10))} (${Number(r.last_count_qty).toFixed(0)})` : '—'}
                   </td>
                   <td className={`px-3 py-2 text-right font-bold ${low ? 'text-red-400' : 'text-gray-900'}`}>
                     {soh.toFixed(0)} {low && '?'}

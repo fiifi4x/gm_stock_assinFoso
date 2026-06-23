@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
+import { fmtDate } from '@/lib/fmtDate'
 
 type Receipt = {
   id: number
@@ -20,9 +21,6 @@ type Line = {
   usage_unit: string | null
 }
 
-function fmtDate(d: string) {
-  return new Date(d).toLocaleDateString('en-GH', { day: '2-digit', month: 'short', year: 'numeric' })
-}
 
 function fmtAmt(val: string | null) {
   if (val === null || val === undefined) return '—'

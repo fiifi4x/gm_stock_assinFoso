@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { fmtDate } from '@/lib/fmtDate'
 
 const STAFF = ['joe', 'bino', 'james', 'rawlings']
 const TABS = ['Time In', 'Time Out', 'Analytics'] as const
@@ -143,7 +144,7 @@ function groupByDate(rows: RecentRow[]) {
 }
 
 function fmtDate(d: string) {
-  return new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', weekday: 'short', year: 'numeric' })
+  return fmtDate(d)
 }
 
 function AnalyticsTab({ all }: { all: RecentRow[] }) {
@@ -316,7 +317,7 @@ export default function StaffTimesPage() {
                   {grouped.map(([date, map]) => (
                     <tr key={date} className="hover:bg-gray-50">
                       <td className="px-3 py-2 text-gray-600 whitespace-nowrap">
-                        {new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', weekday: 'short' })}
+                        {fmtDate(date)}
                       </td>
                       {STAFF.map(s => (
                         <>

@@ -1,6 +1,7 @@
 ﻿import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import sql from '@/lib/db'
+import { fmtDate } from '@/lib/fmtDate'
 
 export default async function CashAtBankPage() {
   const session = await auth()
@@ -37,7 +38,7 @@ export default async function CashAtBankPage() {
             <div key={r.entry_date}
               className={`rounded-xl border p-4 space-y-2 ${hasConfirm ? 'bg-blue-950/40 border-blue-800' : 'bg-white border-gray-200'}`}>
               <div className="flex items-center justify-between">
-                <span className="text-gray-600 text-sm">{String(r.entry_date).slice(0,10)}</span>
+                <span className="text-gray-600 text-sm">{fmtDate(String(r.entry_date).slice(0,10))}</span>
                 <span className="text-gray-900 font-bold text-lg">{n(r.running_cash_at_bank)}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
@@ -83,7 +84,7 @@ export default async function CashAtBankPage() {
               return (
                 <tr key={r.entry_date}
                   className={`border-t border-gray-200 ${hasConfirm ? 'bg-blue-950/40' : 'hover:bg-white/50'}`}>
-                  <td className="px-3 py-2 text-gray-300 whitespace-nowrap">{String(r.entry_date).slice(0,10)}</td>
+                  <td className="px-3 py-2 text-gray-300 whitespace-nowrap">{fmtDate(String(r.entry_date).slice(0,10))}</td>
                   <td className="px-3 py-2 text-right text-gray-300">{nz(r.cash_counted) || '—'}</td>
                   <td className="px-3 py-2 text-right text-green-400">{nz(r.grony_personal_cash_in)}</td>
                   <td className="px-3 py-2 text-right text-green-400">{nz(r.debtors_cash_in)}</td>
