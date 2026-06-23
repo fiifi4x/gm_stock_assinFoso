@@ -7,14 +7,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({
       credentials: {
-        username: { label: 'Username' },
+        username: { label: 'Username or Email' },
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
         if (!credentials?.username || !credentials?.password) return null
+        const login = credentials.username as string
         const rows = await sql`
           SELECT id, username, display_name, role, password_hash
-          FROM app_users WHERE username = ${credentials.username as string}
+          FROM app_users
+          WHERE username = ${login} OR email = ${login}
         `
         if (!rows.length) return null
         const user = rows[0]

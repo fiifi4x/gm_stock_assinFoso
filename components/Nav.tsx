@@ -14,6 +14,7 @@ const allLinks = [
   { href: '/cash-at-bank', label: 'Cash at Bank', roles: ['owner','manager'] },
   { href: '/analysis', label: 'Analysis', roles: ['owner','manager','staff'] },
   { href: '/item', label: 'Inventory', roles: ['owner','manager','staff'] },
+  { href: '/users', label: 'Users', roles: ['owner'] },
 ]
 
 export default function Nav({ user }: { user: NavUser }) {
