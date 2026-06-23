@@ -6,16 +6,16 @@ import { useEffect, useState } from 'react'
 type Props = { role: string }
 
 const row1Base = [
-  { href: '/dashboard', label: 'Home', icon: '?' },
-  { href: '/sales', label: 'Sales', icon: '??' },
-  { href: '/bills', label: 'Bills', icon: '??' },
-  { href: '/expenses', label: 'Expenses', icon: '??' },
+  { href: '/dashboard', label: 'Home', icon: '\u{1F3E0}' },
+  { href: '/sales', label: 'Sales', icon: '\u{1F9FE}' },
+  { href: '/bills', label: 'Bills', icon: '\u{1F4CB}' },
+  { href: '/expenses', label: 'Expenses', icon: '\u{1F4B8}' },
 ]
 
 const row2All = [
-  { href: '/cash-at-bank', label: 'CAB', icon: '??', staffHide: true },
-  { href: '/analysis', label: 'Analysis', icon: '??', staffHide: false },
-  { href: '/item', label: 'Inventory', icon: '??', staffHide: false },
+  { href: '/cash-at-bank', label: 'CAB', icon: '\u{1F3E6}', staffHide: true },
+  { href: '/analysis', label: 'Analysis', icon: '\u{1F4CA}', staffHide: false },
+  { href: '/item', label: 'Inventory', icon: '\u{1F4E6}', staffHide: false },
 ]
 
 function Tab({ href, label, icon, active }: { href: string; label: string; icon: string; active: boolean }) {
@@ -48,7 +48,7 @@ export default function BottomNav({ role }: Props) {
 
   const row1 = [
     ...row1Base,
-    { href: '/stock/count', label: overdueCount ? `Count(${overdueCount})` : 'Count', icon: '??' },
+    { href: '/stock/count', label: overdueCount ? `Count(${overdueCount})` : 'Count', icon: '\u{1F4DD}' },
   ]
 
   return (
