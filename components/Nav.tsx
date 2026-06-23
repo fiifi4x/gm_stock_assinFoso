@@ -12,9 +12,8 @@ const allLinks = [
   { href: '/expenses', label: 'Expenses', roles: ['owner','manager','staff'] },
   { href: '/stock/count', label: 'Count', roles: ['owner','manager','staff'] },
   { href: '/cash-at-bank', label: 'Cash at Bank', roles: ['owner','manager'] },
-  { href: '/losses', label: 'Losses', roles: ['owner','manager','staff'] },
   { href: '/analysis', label: 'Analysis', roles: ['owner','manager','staff'] },
-  { href: '/item', label: 'Item', roles: ['owner','manager','staff'] },
+  { href: '/item', label: 'Inventory', roles: ['owner','manager','staff'] },
 ]
 
 export default function Nav({ user }: { user: NavUser }) {
