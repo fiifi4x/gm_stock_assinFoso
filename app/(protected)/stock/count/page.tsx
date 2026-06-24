@@ -510,7 +510,7 @@ export default function StockCountPage() {
         .then(r => r.ok ? r.json() : Promise.reject(r.status))
         .then(d => { setFlags(d); setFlagsLoading(false) })
         .catch(() => {
-          setFlags({ noCash: [], missingDays: [], duplicates: [], costGteSell: [], notInInventory: [], noGroup: [], noStaffTimes: [], uncheckedCab: [] })
+          setFlags({ noCash: [], missingDays: [], duplicates: [], costGteSell: [], notInInventory: [], noGroup: [], noStaffTimes: [], uncheckedCab: [], groupNames: [] })
           setFlagsLoading(false)
         })
     }
