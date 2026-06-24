@@ -15,7 +15,7 @@ const row1Base = [
 const row2All = [
   { href: '/cash-at-bank', label: 'CAB', icon: '\u{1F3E6}', staffHide: true },
   { href: '/analysis', label: 'Analysis', icon: '\u{1F4CA}', staffHide: false },
-  { href: '/item', label: 'Inventory', icon: '\u{1F4E6}', staffHide: false },
+  { href: '/item', label: 'Items', icon: '\u{1F4E6}', staffHide: false },
 ]
 
 function Tab({ href, label, icon, active }: { href: string; label: string; icon: string; active: boolean }) {
