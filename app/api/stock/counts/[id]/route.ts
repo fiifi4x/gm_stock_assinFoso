@@ -1,5 +1,6 @@
 import { auth } from '@/lib/auth'
 import sql from '@/lib/db'
+import { logActivity } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -16,5 +17,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     WHERE id = ${id}
     RETURNING id, item_name, count_date::text AS count_date, quantity_counted, notes, counted_by, source
   `
+  const actor = (session.user as any)?.username || session.user?.name || 'Unknown'
+  await logActivity(actor, 'edited stock count', `${rows[0].item_name} · qty ${quantity_counted} on ${rows[0].count_date}`)
   return NextResponse.json(rows[0])
 }

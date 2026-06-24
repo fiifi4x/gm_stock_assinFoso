@@ -1,5 +1,6 @@
 import { auth } from '@/lib/auth'
 import sql from '@/lib/db'
+import { logActivity } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
@@ -20,5 +21,6 @@ export async function POST(req: NextRequest) {
     DO UPDATE SET actual_in = ${actual_in}, actual_out = ${actual_out ?? null}, entered_by = ${enteredBy}
   `
 
+  await logActivity(enteredBy ?? 'Unknown', 'entered time', `${staff_name} · in ${actual_in}${actual_out ? ` out ${actual_out}` : ''} on ${work_date}`)
   return NextResponse.json({ ok: true })
 }

@@ -1,5 +1,6 @@
 import { auth } from '@/lib/auth'
 import sql from '@/lib/db'
+import { logActivity } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET() {
@@ -46,5 +47,6 @@ export async function POST(req: NextRequest) {
 
   await sql`INSERT INTO cash_at_bank (entry_date) VALUES (${date}) ON CONFLICT (entry_date) DO NOTHING`
 
+  await logActivity(enteredBy ?? 'Unknown', 'added bill', `${billNumber} · ₵${total.toFixed(2)}${vendorName ? ` from ${vendorName}` : ''}`)
   return NextResponse.json({ ok: true, billNumber })
 }

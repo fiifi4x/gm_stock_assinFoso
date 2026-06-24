@@ -1,5 +1,6 @@
 import { auth } from '@/lib/auth'
 import sql from '@/lib/db'
+import { logActivity } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET() {
@@ -62,5 +63,6 @@ export async function POST(req: NextRequest) {
 
   await sql`INSERT INTO cash_at_bank (entry_date) VALUES (${expense_date}) ON CONFLICT (entry_date) DO NOTHING`
 
+  await logActivity(enteredBy ?? 'Unknown', 'added expense', `${expense_account} · ₵${Number(amount).toFixed(2)} on ${expense_date}`)
   return NextResponse.json({ ...row, property_status: isProp ? 'at_shop' : null })
 }

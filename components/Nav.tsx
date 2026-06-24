@@ -16,6 +16,7 @@ const allLinks = [
   { href: '/stock/counts', label: 'Counts', roles: ['owner','manager','staff'] },
   { href: '/cash-at-bank', label: 'Cash at Bank', roles: ['owner','manager'] },
   { href: '/analysis', label: 'Analysis', roles: ['owner','manager','staff'] },
+  { href: '/logs', label: 'Logs', roles: ['owner','manager','staff'] },
   { href: '/users', label: 'Users', roles: ['owner'] },
 ]
 

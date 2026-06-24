@@ -1,5 +1,6 @@
 import { auth } from '@/lib/auth'
 import sql from '@/lib/db'
+import { logActivity } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -34,5 +35,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     WHERE id = ${Number(id)}
     RETURNING id, bill_number, bill_date::date AS bill_date, vendor_name, total, status, entered_by
   `
+  const actor = (session.user as any)?.username || session.user?.name || 'Unknown'
+  await logActivity(actor, 'edited bill', `Bill #${id}${row.vendor_name ? ` — ${row.vendor_name}` : ''}`)
   return NextResponse.json(row)
 }

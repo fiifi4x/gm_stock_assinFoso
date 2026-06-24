@@ -1,5 +1,6 @@
 import { auth } from '@/lib/auth'
 import sql from '@/lib/db'
+import { logActivity } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
@@ -36,5 +37,6 @@ export async function POST(req: NextRequest) {
     ON CONFLICT (entry_date) DO NOTHING
   `
 
+  await logActivity(enteredBy ?? 'Unknown', 'added sale receipt', `${receiptNumber} · ₵${total.toFixed(2)} on ${date}`)
   return NextResponse.json({ ok: true, receiptNumber })
 }
