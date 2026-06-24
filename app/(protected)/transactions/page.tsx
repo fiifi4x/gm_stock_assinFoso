@@ -44,20 +44,29 @@ const TYPE_DOT: Record<TxType, string> = {
   expense: 'bg-red-400',
 }
 
+const DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+
 function fmt(n: number) { return n % 1 === 0 ? n.toString() : n.toFixed(2) }
 function fmtMoney(n: number) {
-  return `₵${n.toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return `₵${Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`
 }
 function fmtDate(iso: string) {
-  return new Date(iso + 'T00:00:00').toLocaleDateString('en-GH', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-  })
+  try {
+    const d = new Date(iso + 'T00:00:00')
+    return `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`
+  } catch { return iso }
 }
 function fmtTime(iso: string | null) {
   if (!iso) return '—'
-  return new Date(iso).toLocaleTimeString('en-GH', {
-    hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Accra',
-  })
+  try {
+    const d = new Date(iso)
+    // UTC+0 (Ghana time) — just use UTC hours/minutes directly
+    const h = d.getUTCHours(), m = d.getUTCMinutes()
+    const ampm = h >= 12 ? 'pm' : 'am'
+    const h12 = h % 12 || 12
+    return `${h12}:${m.toString().padStart(2, '0')}${ampm}`
+  } catch { return '—' }
 }
 
 function groupByDate(txs: Tx[]) {
