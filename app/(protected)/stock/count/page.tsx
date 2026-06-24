@@ -11,7 +11,7 @@ type Item = {
 
 type Flags = {
   noCash: any[]; missingDays: any[]; duplicates: any[]
-  costGteSell: any[]; notInInventory: any[]; noGroup: any[]; noStaffTimes: any[]
+  costGteSell: any[]; notInInventory: any[]; noGroup: any[]; noStaffTimes: any[]; uncheckedCab: any[]
 }
 
 type InvItem = { id: number; canonical_name: string }
@@ -21,7 +21,7 @@ type NameRes = {
   items: InvItem[]
 }
 
-const ALL_TABS = ['Daily', '15-Day', 'No Cash', 'Missing Days', 'No Times', 'Duplicates', 'Cost≥Price', 'Not in Inv.', 'No Group', 'Inv. Done', 'Inv. Todo'] as const
+const ALL_TABS = ['Daily', '15-Day', 'No Cash', 'Missing Days', 'No Times', 'Duplicates', 'Cost≥Price', 'Not in Inv.', 'No Group', 'CAB Weekly', 'Inv. Done', 'Inv. Todo'] as const
 type Tab = typeof ALL_TABS[number]
 const STAFF = ['joe', 'bino', 'james', 'rawlings']
 
@@ -415,14 +415,14 @@ export default function StockCountPage() {
   }, [])
 
   useEffect(() => {
-    const flagTabs: Tab[] = ['No Cash', 'Missing Days', 'No Times', 'Duplicates', 'Cost≥Price', 'Not in Inv.', 'No Group']
+    const flagTabs: Tab[] = ['No Cash', 'Missing Days', 'No Times', 'Duplicates', 'Cost≥Price', 'Not in Inv.', 'No Group', 'CAB Weekly']
     if (flagTabs.includes(tab) && !flags && !flagsLoading) {
       setFlagsLoading(true)
       fetch('/api/flags')
         .then(r => r.ok ? r.json() : Promise.reject(r.status))
         .then(d => { setFlags(d); setFlagsLoading(false) })
         .catch(() => {
-          setFlags({ noCash: [], missingDays: [], duplicates: [], costGteSell: [], notInInventory: [], noGroup: [], noStaffTimes: [] })
+          setFlags({ noCash: [], missingDays: [], duplicates: [], costGteSell: [], notInInventory: [], noGroup: [], noStaffTimes: [], uncheckedCab: [] })
           setFlagsLoading(false)
         })
     }
@@ -567,6 +567,28 @@ export default function StockCountPage() {
       </div>
     )
 
+    if (tab === 'CAB Weekly') return (
+      <div className="space-y-2">
+        <p className="text-xs text-gray-400">{flags.uncheckedCab.length} week{flags.uncheckedCab.length !== 1 ? 's' : ''} with no Cash at Bank confirmation recorded</p>
+        {flags.uncheckedCab.length === 0
+          ? <p className="py-10 text-center text-gray-400 text-sm">All weeks have a cash-at-bank confirmation.</p>
+          : flags.uncheckedCab.map((r: any) => (
+            <div key={r.week_start}
+              className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-3 py-2.5 gap-2">
+              <div>
+                <p className="text-sm font-medium text-gray-900">{fmtDate(r.week_start)} – {fmtDate(r.week_end)}</p>
+                <p className="text-xs text-gray-400 mt-0.5">No cab_total recorded this week</p>
+              </div>
+              <a href="/cash-at-bank"
+                className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition">
+                Go to CAB →
+              </a>
+            </div>
+          ))
+        }
+      </div>
+    )
+
     return null
   }
 
@@ -628,6 +650,7 @@ export default function StockCountPage() {
     'Cost≥Price': flags.costGteSell.length,
     'Not in Inv.': flags.notInInventory.length,
     'No Group': flags.noGroup.length,
+    'CAB Weekly': flags.uncheckedCab.length,
   } : {}
 
   const nameResCounts: Partial<Record<Tab, number>> = nameRes ? {

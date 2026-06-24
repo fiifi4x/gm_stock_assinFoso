@@ -75,6 +75,7 @@ export async function GET() {
     notInInventory,
     noGroup,
     noStaffTimes,
+    uncheckedCab,
   ] = await Promise.all([
 
     // 1. Walk-in customers with no cash counted
@@ -200,9 +201,31 @@ export async function GET() {
         AND d NOT IN (SELECT DISTINCT work_date FROM staff_times WHERE actual_in IS NOT NULL)
       ORDER BY d DESC
     `),
+
+    // 8. Weeks with no cash-at-bank confirmation (cab_total not recorded)
+    safeQuery(() => sql`
+      WITH week_series AS (
+        SELECT DATE_TRUNC('week', generate_series(
+          DATE_TRUNC('week', (SELECT MIN(entry_date) FROM cash_at_bank)),
+          DATE_TRUNC('week', CURRENT_DATE) - INTERVAL '7 days',
+          INTERVAL '1 week'
+        ))::date AS week_start
+      )
+      SELECT
+        w.week_start::text,
+        (w.week_start + INTERVAL '6 days')::date::text AS week_end
+      FROM week_series w
+      WHERE NOT EXISTS (
+        SELECT 1 FROM cash_at_bank cab
+        WHERE cab.entry_date >= w.week_start
+          AND cab.entry_date <= w.week_start + INTERVAL '6 days'
+          AND cab.cab_total IS NOT NULL
+      )
+      ORDER BY w.week_start DESC
+    `),
   ])
 
   const filteredDups = duplicates.filter((r: any) => shouldKeepPair(r.name1, r.name2))
 
-  return NextResponse.json({ noCash, missingDays, duplicates: filteredDups, costGteSell, notInInventory, noGroup, noStaffTimes })
+  return NextResponse.json({ noCash, missingDays, duplicates: filteredDups, costGteSell, notInInventory, noGroup, noStaffTimes, uncheckedCab })
 }
