@@ -135,17 +135,31 @@ function NoCashFix({ r, onFixed }: { r: any; onFixed: (id: number) => void }) {
   )
 }
 
+const NO_WORK_REASONS = [
+  'No work — Public Holiday',
+  'No work — Christmas Day',
+  'No work — Good Friday',
+  'No work — Easter Monday',
+  'No work — Independence Day',
+  'No work — Special Assignment',
+  'No work — Shop Closed',
+  'No work — Staff Training',
+  'No work — Other',
+]
+
 // Missing Days — create a minimal receipt for that date
 function MissingDayFix({ date, onFixed }: { date: string; onFixed: (d: string) => void }) {
   const [total, setTotal] = useState('')
   const [cash, setCash] = useState('')
   const [saving, setSaving] = useState(false)
+  const [showNoWork, setShowNoWork] = useState(false)
+  const [noWorkReason, setNoWorkReason] = useState(NO_WORK_REASONS[0])
 
-  async function markNoSales() {
+  async function markNoWork() {
     setSaving(true)
-    await fetch('/api/sales/receipt', {
+    await fetch('/api/flags/no-work', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date, total: 0, customerName: 'No Sales Day' }),
+      body: JSON.stringify({ work_date: date, reason: noWorkReason }),
     })
     setSaving(false)
     onFixed(date)
@@ -164,25 +178,45 @@ function MissingDayFix({ date, onFixed }: { date: string; onFixed: (d: string) =
 
   return (
     <FixRow label={fmtDate(date)} sub="No sales receipt on this day">
-      <input type="number" min="0" step="0.01" inputMode="decimal" placeholder="Sales total (₵) — leave blank if no sales"
-        value={total} onChange={e => setTotal(e.target.value)} className={inputCls} />
-      {total && (
-        <input type="number" min="0" step="0.01" inputMode="decimal" placeholder="Cash counted (₵, optional)"
-          value={cash} onChange={e => setCash(e.target.value)} className={inputCls} />
+      {showNoWork ? (
+        <div className="space-y-2">
+          <select value={noWorkReason} onChange={e => setNoWorkReason(e.target.value)} className={inputCls}>
+            {NO_WORK_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+          <div className="flex gap-2">
+            <button onClick={markNoWork} disabled={saving}
+              className="flex-1 bg-red-500 hover:bg-red-400 disabled:opacity-40 text-white text-sm font-semibold rounded-xl py-2.5 transition">
+              {saving ? 'Saving…' : 'Confirm No Work'}
+            </button>
+            <button onClick={() => setShowNoWork(false)} disabled={saving}
+              className="px-4 py-2.5 bg-gray-100 text-gray-600 text-sm font-semibold rounded-xl">
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <input type="number" min="0" step="0.01" inputMode="decimal" placeholder="Sales total (₵) — leave blank if no sales"
+            value={total} onChange={e => setTotal(e.target.value)} className={inputCls} />
+          {total && (
+            <input type="number" min="0" step="0.01" inputMode="decimal" placeholder="Cash counted (₵, optional)"
+              value={cash} onChange={e => setCash(e.target.value)} className={inputCls} />
+          )}
+          <div className="flex gap-2">
+            {total ? (
+              <button onClick={addReceipt} disabled={saving}
+                className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl py-2.5 transition">
+                {saving ? 'Saving…' : 'Create Receipt'}
+              </button>
+            ) : (
+              <button onClick={() => setShowNoWork(true)}
+                className="flex-1 bg-orange-500 hover:bg-orange-400 text-white text-sm font-semibold rounded-xl py-2.5 transition">
+                No Work
+              </button>
+            )}
+          </div>
+        </>
       )}
-      <div className="flex gap-2">
-        {total ? (
-          <button onClick={addReceipt} disabled={saving}
-            className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl py-2.5 transition">
-            {saving ? 'Saving…' : 'Create Receipt'}
-          </button>
-        ) : (
-          <button onClick={markNoSales} disabled={saving}
-            className="flex-1 bg-gray-500 hover:bg-gray-400 disabled:opacity-40 text-white text-sm font-semibold rounded-xl py-2.5 transition">
-            {saving ? 'Saving…' : 'Mark as No Sales Day'}
-          </button>
-        )}
-      </div>
     </FixRow>
   )
 }

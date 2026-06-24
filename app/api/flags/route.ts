@@ -88,7 +88,7 @@ export async function GET() {
       ORDER BY receipt_date DESC
     `),
 
-    // 2. Days with no sales receipt (exclude Sundays and today)
+    // 2. Days with no sales receipt (exclude Sundays, today, and no-work days)
     safeQuery(() => sql`
       WITH date_series AS (
         SELECT generate_series(
@@ -101,6 +101,7 @@ export async function GET() {
       FROM date_series
       WHERE EXTRACT(DOW FROM d) <> 0
         AND d NOT IN (SELECT DISTINCT receipt_date::date FROM sales_receipts)
+        AND d NOT IN (SELECT work_date FROM no_work_days)
       ORDER BY d DESC
     `),
 
