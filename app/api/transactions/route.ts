@@ -14,16 +14,18 @@ export async function GET() {
     safeFetch(async () => {
       const rows = await sql`
         SELECT
-          'bill'      AS type,
-          id,
-          bill_date::text AS date,
-          vendor_name AS description,
-          total::text AS total,
-          bill_number AS ref,
-          entered_by  AS by,
-          (SELECT COUNT(*)::int FROM bill_lines WHERE bill_id = bills.id) AS item_count
-        FROM bills
-        ORDER BY bill_date DESC, id DESC
+          'bill'          AS type,
+          b.id,
+          b.bill_date::text AS date,
+          b.vendor_name   AS description,
+          b.total::text   AS total,
+          b.bill_number   AS ref,
+          NULL            AS by,
+          COUNT(bl.id)    AS item_count
+        FROM bills b
+        LEFT JOIN bill_lines bl ON bl.bill_id = b.id
+        GROUP BY b.id, b.bill_date, b.vendor_name, b.total, b.bill_number
+        ORDER BY b.bill_date DESC, b.id DESC
         LIMIT 300
       `
       return rows
@@ -32,16 +34,18 @@ export async function GET() {
     safeFetch(async () => {
       const rows = await sql`
         SELECT
-          'sale'          AS type,
-          id,
-          receipt_date::text AS date,
-          customer_name   AS description,
-          total::text     AS total,
-          receipt_number  AS ref,
-          entered_by      AS by,
-          (SELECT COUNT(*)::int FROM sales_receipt_lines WHERE receipt_id = sales_receipts.id) AS item_count
-        FROM sales_receipts
-        ORDER BY receipt_date DESC, id DESC
+          'sale'              AS type,
+          sr.id,
+          sr.receipt_date::text AS date,
+          sr.customer_name    AS description,
+          sr.total::text      AS total,
+          sr.receipt_number   AS ref,
+          NULL                AS by,
+          COUNT(srl.id)       AS item_count
+        FROM sales_receipts sr
+        LEFT JOIN sales_receipt_lines srl ON srl.receipt_id = sr.id
+        GROUP BY sr.id, sr.receipt_date, sr.customer_name, sr.total, sr.receipt_number
+        ORDER BY sr.receipt_date DESC, sr.id DESC
         LIMIT 300
       `
       return rows
