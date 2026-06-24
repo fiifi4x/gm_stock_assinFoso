@@ -11,6 +11,7 @@ const allLinks = [
   { href: '/sales', label: 'Sales', roles: ['owner','manager','staff'] },
   { href: '/bills', label: 'Bills', roles: ['owner','manager','staff'] },
   { href: '/expenses', label: 'Expenses', roles: ['owner','manager','staff'] },
+  { href: '/rota', label: 'Rota', roles: ['owner','manager'] },
   { href: '/stock/count', label: 'Flags', roles: ['owner','manager','staff'] },
   { href: '/stock/counts', label: 'Counts', roles: ['owner','manager','staff'] },
   { href: '/cash-at-bank', label: 'Cash at Bank', roles: ['owner','manager'] },
