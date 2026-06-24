@@ -135,9 +135,9 @@ export default function NewReceiptPage() {
         {/* Item lines table */}
         <div>
           <label className="text-sm text-gray-600 block mb-2">Items</label>
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          <div className="bg-white border border-gray-200 rounded-xl">
             {/* Header */}
-            <div className="grid grid-cols-[1fr_80px_90px_80px_28px] gap-2 px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            <div className="grid grid-cols-[1fr_80px_90px_80px_28px] gap-2 px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide rounded-t-xl">
               <span>Item Details</span>
               <span className="text-right">Rate</span>
               <span className="text-right">Qty</span>
