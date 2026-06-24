@@ -18,9 +18,10 @@ type Flags = {
   costGteSell: any[]
   notInInventory: any[]
   noGroup: any[]
+  noStaffTimes: any[]
 }
 
-const ALL_TABS = ['Daily', '15-Day', 'No Cash', 'Missing Days', 'Duplicates', 'Cost≥Price', 'Not in Inv.', 'No Group'] as const
+const ALL_TABS = ['Daily', '15-Day', 'No Cash', 'Missing Days', 'No Times', 'Duplicates', 'Cost≥Price', 'Not in Inv.', 'No Group'] as const
 type Tab = typeof ALL_TABS[number]
 
 function Badge({ n }: { n: number }) {
@@ -114,7 +115,7 @@ export default function StockCountPage() {
   }, [])
 
   useEffect(() => {
-    const flagTabs: Tab[] = ['No Cash', 'Missing Days', 'Duplicates', 'Cost≥Price', 'Not in Inv.', 'No Group']
+    const flagTabs: Tab[] = ['No Cash', 'Missing Days', 'No Times', 'Duplicates', 'Cost≥Price', 'Not in Inv.', 'No Group']
     if (flagTabs.includes(tab) && !flags && !flagsLoading) {
       setFlagsLoading(true)
       fetch('/api/flags').then(r => r.json()).then(d => { setFlags(d); setFlagsLoading(false) })
@@ -147,6 +148,16 @@ export default function StockCountPage() {
           headers={['Date']}
           rows={flags.missingDays.map(r => [fmtDate(r.missing_date)])}
           empty="No missing days found."
+        />
+      </div>
+    )
+    if (tab === 'No Times') return (
+      <div className="space-y-2">
+        <p className="text-xs text-gray-400">{flags.noStaffTimes.length} day{flags.noStaffTimes.length !== 1 ? 's' : ''} with no staff times recorded (excluding Sundays)</p>
+        <FlagTable
+          headers={['Date']}
+          rows={flags.noStaffTimes.map(r => [fmtDate(r.missing_date)])}
+          empty="All working days have staff times recorded."
         />
       </div>
     )
@@ -199,6 +210,7 @@ export default function StockCountPage() {
   const flagCounts: Partial<Record<Tab, number>> = flags ? {
     'No Cash': flags.noCash.length,
     'Missing Days': flags.missingDays.length,
+    'No Times': flags.noStaffTimes.length,
     'Duplicates': flags.duplicates.length,
     'Cost≥Price': flags.costGteSell.length,
     'Not in Inv.': flags.notInInventory.length,

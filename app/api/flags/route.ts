@@ -9,6 +9,7 @@ export async function GET() {
     costGteSell,
     notInInventory,
     noGroup,
+    noStaffTimes,
   ] = await Promise.all([
 
     // 1. Walk-in customers with no cash counted
@@ -91,7 +92,23 @@ export async function GET() {
         AND status NOT IN ('inactive')
       ORDER BY canonical_name
     `,
+
+    // 7. Days with no staff times at all (exclude Sundays and today)
+    sql`
+      WITH date_series AS (
+        SELECT generate_series(
+          (SELECT MIN(work_date) FROM staff_times),
+          CURRENT_DATE - INTERVAL '1 day',
+          INTERVAL '1 day'
+        )::date AS d
+      )
+      SELECT d::text AS missing_date
+      FROM date_series
+      WHERE EXTRACT(DOW FROM d) <> 0
+        AND d NOT IN (SELECT DISTINCT work_date FROM staff_times WHERE actual_in IS NOT NULL)
+      ORDER BY d DESC
+    `,
   ])
 
-  return NextResponse.json({ noCash, missingDays, duplicates, costGteSell, notInInventory, noGroup })
+  return NextResponse.json({ noCash, missingDays, duplicates, costGteSell, notInInventory, noGroup, noStaffTimes })
 }
