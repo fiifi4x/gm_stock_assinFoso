@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { fmtDate } from '@/lib/fmtDate'
 
 type Item = {
@@ -21,7 +21,14 @@ type Flags = {
   noStaffTimes: any[]
 }
 
-const ALL_TABS = ['Daily', '15-Day', 'No Cash', 'Missing Days', 'No Times', 'Duplicates', 'Cost≥Price', 'Not in Inv.', 'No Group'] as const
+type InvItem = { id: number; canonical_name: string }
+type NameRes = {
+  unmatched: { name: string; line_count: number }[]
+  matched: { name: string; canonical_name: string; line_count: number }[]
+  items: InvItem[]
+}
+
+const ALL_TABS = ['Daily', '15-Day', 'No Cash', 'Missing Days', 'No Times', 'Duplicates', 'Cost≥Price', 'Not in Inv.', 'No Group', 'Inv. Done', 'Inv. Todo'] as const
 type Tab = typeof ALL_TABS[number]
 
 function Badge({ n }: { n: number }) {
@@ -97,6 +104,88 @@ function FlagTable({ headers, rows, empty }: { headers: string[]; rows: (string 
   )
 }
 
+function NameResolveRow({
+  name, count, items, onResolved,
+}: {
+  name: string
+  count: number
+  items: InvItem[]
+  onResolved: (name: string, canonical: string, itemId: number) => void
+}) {
+  const [search, setSearch] = useState('')
+  const [selected, setSelected] = useState<InvItem | null>(null)
+  const [open, setOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  const filtered = search.length >= 1
+    ? items.filter(i => i.canonical_name.toLowerCase().includes(search.toLowerCase())).slice(0, 25)
+    : []
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [])
+
+  async function save() {
+    if (!selected) return
+    setSaving(true)
+    await fetch('/api/flags/name-resolution', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ raw_name: name, item_id: selected.id, canonical_name: selected.canonical_name }),
+    })
+    setSaving(false)
+    onResolved(name, selected.canonical_name, selected.id)
+  }
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-3 space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-medium text-gray-900 leading-snug">{name}</p>
+        <span className="shrink-0 text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{count} line{count !== 1 ? 's' : ''}</span>
+      </div>
+
+      <div ref={ref} className="relative">
+        <input
+          value={search}
+          onChange={e => { setSearch(e.target.value); setSelected(null); setOpen(true) }}
+          onFocus={() => setOpen(true)}
+          placeholder="Search inventory to match…"
+          className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-400"
+        />
+        {open && filtered.length > 0 && (
+          <div className="absolute z-10 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden max-h-48 overflow-y-auto">
+            {filtered.map(item => (
+              <button key={item.id}
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => { setSelected(item); setSearch(item.canonical_name); setOpen(false) }}
+                className="w-full text-left px-3 py-2 text-sm text-gray-800 hover:bg-blue-50 border-b border-gray-100 last:border-0">
+                {item.canonical_name}
+              </button>
+            ))}
+          </div>
+        )}
+        {open && search.length >= 1 && filtered.length === 0 && (
+          <div className="absolute z-10 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg px-3 py-2 text-sm text-gray-400">
+            No match found
+          </div>
+        )}
+      </div>
+
+      {selected && (
+        <button onClick={save} disabled={saving}
+          className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl py-2.5 transition">
+          {saving ? 'Saving…' : `Map → ${selected.canonical_name}`}
+        </button>
+      )}
+    </div>
+  )
+}
+
 export default function StockCountPage() {
   const [tab, setTab] = useState<Tab>('Daily')
   const [dailyItems, setDailyItems] = useState<Item[]>([])
@@ -104,6 +193,8 @@ export default function StockCountPage() {
   const [flags, setFlags] = useState<Flags | null>(null)
   const [loading, setLoading] = useState(true)
   const [flagsLoading, setFlagsLoading] = useState(false)
+  const [nameRes, setNameRes] = useState<NameRes | null>(null)
+  const [nameResLoading, setNameResLoading] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -128,8 +219,31 @@ export default function StockCountPage() {
     }
   }, [tab, flags, flagsLoading])
 
+  useEffect(() => {
+    const nameResTabs: Tab[] = ['Inv. Done', 'Inv. Todo']
+    if (nameResTabs.includes(tab) && !nameRes && !nameResLoading) {
+      setNameResLoading(true)
+      fetch('/api/flags/name-resolution')
+        .then(r => r.json())
+        .then(d => { setNameRes(d); setNameResLoading(false) })
+        .catch(() => { setNameRes({ unmatched: [], matched: [], items: [] }); setNameResLoading(false) })
+    }
+  }, [tab, nameRes, nameResLoading])
+
   function removeDaily(id: number) { setDailyItems(prev => prev.filter(i => i.item_id !== id)) }
   function removeOverdue(id: number) { setOverdueItems(prev => prev.filter(i => i.item_id !== id)) }
+
+  function handleResolved(rawName: string, canonical: string, itemId: number) {
+    setNameRes(prev => {
+      if (!prev) return prev
+      const row = prev.unmatched.find(u => u.name === rawName)
+      return {
+        ...prev,
+        unmatched: prev.unmatched.filter(u => u.name !== rawName),
+        matched: [{ name: rawName, canonical_name: canonical, line_count: row?.line_count ?? 1 }, ...prev.matched],
+      }
+    })
+  }
 
   if (loading) return <div className="py-20 text-center text-gray-600">Loading…</div>
 
@@ -169,7 +283,7 @@ export default function StockCountPage() {
     )
     if (tab === 'Duplicates') return (
       <div className="space-y-2">
-        <p className="text-xs text-gray-400">{flags.duplicates.length} possible duplicate pair{flags.duplicates.length !== 1 ? 's' : ''} (similarity &gt; 70%)</p>
+        <p className="text-xs text-gray-400">{flags.duplicates.length} possible duplicate pair{flags.duplicates.length !== 1 ? 's' : ''} (similarity &gt; 65%)</p>
         <FlagTable
           headers={['Item 1', 'Item 2']}
           rows={flags.duplicates.map(r => [r.name1, r.name2])}
@@ -213,6 +327,41 @@ export default function StockCountPage() {
     return null
   }
 
+  function renderNameRes() {
+    if (nameResLoading || !nameRes) return <div className="py-10 text-center text-gray-400">Loading…</div>
+
+    if (tab === 'Inv. Todo') return (
+      <div className="space-y-2">
+        <p className="text-xs text-gray-400">{nameRes.unmatched.length} receipt line name{nameRes.unmatched.length !== 1 ? 's' : ''} not matched to inventory — search and select the correct item to resolve</p>
+        {nameRes.unmatched.length === 0
+          ? <p className="py-10 text-center text-gray-400 text-sm">All names matched.</p>
+          : nameRes.unmatched.map(u => (
+            <NameResolveRow
+              key={u.name}
+              name={u.name}
+              count={u.line_count}
+              items={nameRes.items}
+              onResolved={handleResolved}
+            />
+          ))
+        }
+      </div>
+    )
+
+    if (tab === 'Inv. Done') return (
+      <div className="space-y-2">
+        <p className="text-xs text-gray-400">{nameRes.matched.length} receipt line name{nameRes.matched.length !== 1 ? 's' : ''} matched to inventory</p>
+        <FlagTable
+          headers={['Receipt Name', 'Matched To', 'Lines']}
+          rows={nameRes.matched.map(r => [r.name, r.canonical_name, r.line_count])}
+          empty="No matched names yet."
+        />
+      </div>
+    )
+
+    return null
+  }
+
   const flagCounts: Partial<Record<Tab, number>> = flags ? {
     'No Cash': flags.noCash.length,
     'Missing Days': flags.missingDays.length,
@@ -223,7 +372,13 @@ export default function StockCountPage() {
     'No Group': flags.noGroup.length,
   } : {}
 
+  const nameResCounts: Partial<Record<Tab, number>> = nameRes ? {
+    'Inv. Todo': nameRes.unmatched.length,
+    'Inv. Done': nameRes.matched.length,
+  } : {}
+
   const isCountTab = tab === 'Daily' || tab === '15-Day'
+  const isNameResTab = tab === 'Inv. Done' || tab === 'Inv. Todo'
 
   return (
     <div className="py-4 space-y-4">
@@ -236,7 +391,9 @@ export default function StockCountPage() {
       <div className="overflow-x-auto -mx-4 px-4">
         <div className="flex gap-1 bg-gray-100 rounded-xl p-1 min-w-max">
           {ALL_TABS.map(t => {
-            const cnt = t === 'Daily' ? dailyItems.length : t === '15-Day' ? overdueItems.length : (flagCounts[t] ?? 0)
+            const cnt = t === 'Daily' ? dailyItems.length
+              : t === '15-Day' ? overdueItems.length
+              : (flagCounts[t] ?? nameResCounts[t] ?? 0)
             return (
               <button key={t} onClick={() => setTab(t)}
                 className={`px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition
@@ -259,7 +416,7 @@ export default function StockCountPage() {
             ))}
           </div>
         )
-      ) : renderFlags()}
+      ) : isNameResTab ? renderNameRes() : renderFlags()}
     </div>
   )
 }
