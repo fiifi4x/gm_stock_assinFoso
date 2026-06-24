@@ -143,9 +143,6 @@ function groupByDate(rows: RecentRow[]) {
   return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]))
 }
 
-function fmtDate(d: string) {
-  return fmtDate(d)
-}
 
 function AnalyticsTab({ all }: { all: RecentRow[] }) {
   const stats = STAFF.map(name => {
