@@ -33,7 +33,7 @@ function Badge({ n }: { n: number }) {
   return <span className="ml-1 bg-red-100 text-red-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{n}</span>
 }
 
-const inputCls = 'w-full bg-gray-100 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-400'
+const inputCls = 'w-full bg-gray-100 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 placeholder-gray-400 outline-none focus:ring-1 focus:ring-blue-400'
 
 // ── Count cards ───────────────────────────────────────────────────────────────
 
@@ -58,26 +58,26 @@ function CountCard({ item, onSaved }: { item: Item; onSaved: (id: number) => voi
   const badgeLabel = overdue === null ? 'Never counted' : overdue === 0 ? 'Not today' : `${overdue}d overdue`
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
-      <div className="flex items-start justify-between gap-3">
+    <div className="bg-white border border-gray-200 rounded-lg px-3 py-2 space-y-1.5">
+      <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-gray-900 font-medium leading-snug">{item.item_name}</p>
-          {item.cf_group && <p className="text-gray-400 text-xs mt-0.5">{item.cf_group}</p>}
+          <p className="text-xs text-gray-900 font-semibold leading-snug">{item.item_name}</p>
+          {item.cf_group && <p className="text-gray-400 text-[10px]">{item.cf_group}</p>}
         </div>
-        <span className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full ${badgeClass}`}>{badgeLabel}</span>
+        <span className={`shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${badgeClass}`}>{badgeLabel}</span>
       </div>
-      <p className="text-sm text-gray-600">Stock on hand: <span className="text-gray-900 font-semibold text-base">{soh}</span></p>
-      <div className="flex items-center gap-2">
+      <p className="text-[10px] text-gray-500">SOH: <span className="text-gray-900 font-bold text-xs">{soh}</span></p>
+      <div className="flex items-center gap-1.5">
         <button onClick={() => submit(soh)} disabled={saving}
-          className="flex-1 bg-green-700 hover:bg-green-600 disabled:opacity-40 text-white text-sm font-semibold rounded-xl py-3 transition">
+          className="flex-1 bg-green-700 hover:bg-green-600 disabled:opacity-40 text-white text-[11px] font-semibold rounded-lg py-1.5 transition">
           {saving ? 'Saving…' : `Same (${soh})`}
         </button>
         <input type="number" min="0" step="any" value={customQty} onChange={e => setCustomQty(e.target.value)}
           placeholder="New qty" inputMode="decimal"
-          className="w-24 bg-gray-100 border border-gray-300 rounded-xl px-2 py-3 text-base text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-400 text-center" />
+          className="w-20 bg-gray-100 border border-gray-300 rounded-lg px-2 py-1.5 text-xs text-gray-900 placeholder-gray-400 outline-none focus:ring-1 focus:ring-blue-400 text-center" />
         <button onClick={() => { if (customQty !== '') submit(Number(customQty)) }}
           disabled={customQty === '' || saving}
-          className="bg-blue-600 hover:bg-blue-500 disabled:opacity-30 text-white text-sm font-semibold rounded-xl px-4 py-3 transition">
+          className="bg-blue-600 hover:bg-blue-500 disabled:opacity-30 text-white text-[11px] font-semibold rounded-lg px-3 py-1.5 transition">
           Save
         </button>
       </div>
@@ -92,18 +92,18 @@ function FixRow({ label, sub, onFixed, children }: {
 }) {
   const [open, setOpen] = useState(false)
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-2.5 gap-2">
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-1.5 gap-2">
         <div className="min-w-0">
-          <p className="text-sm text-gray-900 font-medium truncate">{label}</p>
-          {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+          <p className="text-xs text-gray-900 font-semibold truncate">{label}</p>
+          {sub && <p className="text-[10px] text-gray-400">{sub}</p>}
         </div>
         <button onClick={() => setOpen(o => !o)}
-          className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition">
+          className="shrink-0 text-[10px] font-semibold px-2 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition">
           {open ? 'Close' : 'Fix'}
         </button>
       </div>
-      {open && <div className="px-3 pb-3 pt-1 border-t border-gray-100 space-y-2">{children}</div>}
+      {open && <div className="px-3 pb-2 pt-1 border-t border-gray-100 space-y-1.5">{children}</div>}
     </div>
   )
 }
@@ -129,7 +129,7 @@ function NoCashFix({ r, onFixed }: { r: any; onFixed: (id: number) => void }) {
       <input type="number" min="0" step="0.01" inputMode="decimal" placeholder="Cash counted (₵)"
         value={cash} onChange={e => setCash(e.target.value)} className={inputCls} />
       <button onClick={save} disabled={!cash || saving}
-        className="w-full bg-green-600 hover:bg-green-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl py-2.5 transition">
+        className="w-full bg-green-600 hover:bg-green-500 disabled:opacity-40 text-white text-xs font-semibold rounded-lg py-1.5 transition">
         {saving ? 'Saving…' : 'Save Cash Counted'}
       </button>
     </FixRow>
@@ -186,7 +186,7 @@ function MissingDayFix({ date, onFixed }: { date: string; onFixed: (d: string) =
           </select>
           <div className="flex gap-2">
             <button onClick={markNoWork} disabled={saving}
-              className="flex-1 bg-red-500 hover:bg-red-400 disabled:opacity-40 text-white text-sm font-semibold rounded-xl py-2.5 transition">
+              className="flex-1 bg-red-500 hover:bg-red-400 disabled:opacity-40 text-white text-xs font-semibold rounded-lg py-1.5 transition">
               {saving ? 'Saving…' : 'Confirm No Work'}
             </button>
             <button onClick={() => setShowNoWork(false)} disabled={saving}
@@ -211,7 +211,7 @@ function MissingDayFix({ date, onFixed }: { date: string; onFixed: (d: string) =
               </button>
             ) : (
               <button onClick={() => setShowNoWork(true)}
-                className="flex-1 bg-orange-500 hover:bg-orange-400 text-white text-sm font-semibold rounded-xl py-2.5 transition">
+                className="flex-1 bg-orange-500 hover:bg-orange-400 text-white text-xs font-semibold rounded-lg py-1.5 transition">
                 No Work
               </button>
             )}
@@ -250,7 +250,7 @@ function NoTimesFix({ date, onFixed }: { date: string; onFixed: (d: string) => v
         <input placeholder="Time Out (optional)" value={timeOut} onChange={e => setTimeOut(e.target.value)} className={inputCls} />
       </div>
       <button onClick={save} disabled={!timeIn || saving}
-        className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl py-2.5 transition">
+        className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-xs font-semibold rounded-lg py-1.5 transition">
         {saving ? 'Saving…' : 'Save Times'}
       </button>
     </FixRow>
@@ -275,7 +275,7 @@ function DuplicateFix({ r, onFixed }: { r: any; onFixed: (id1: number, id2: numb
     <FixRow label={r.name1} sub={`vs. ${r.name2}`}>
       <p className="text-xs text-gray-500">Tap <strong>Different</strong> if these are genuinely separate items. To remove a real duplicate, delete it from Items.</p>
       <button onClick={markDifferent} disabled={saving}
-        className="w-full bg-gray-600 hover:bg-gray-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl py-2.5 transition">
+        className="w-full bg-gray-600 hover:bg-gray-500 disabled:opacity-40 text-white text-xs font-semibold rounded-lg py-1.5 transition">
         {saving ? 'Saving…' : 'Different — Not a Duplicate'}
       </button>
     </FixRow>
@@ -460,7 +460,7 @@ function NameResolveRow({
       </div>
       {selected && (
         <button onClick={save} disabled={saving}
-          className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl py-2.5 transition">
+          className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-xs font-semibold rounded-lg py-1.5 transition">
           {saving ? 'Saving…' : `Map → ${selected.canonical_name}`}
         </button>
       )}
@@ -565,7 +565,7 @@ export default function StockCountPage() {
       <div className="space-y-2">
         <p className="text-xs text-gray-400">{flags.noCash.length} walk-in receipt{flags.noCash.length !== 1 ? 's' : ''} missing cash counted</p>
         {flags.noCash.length === 0
-          ? <p className="py-10 text-center text-gray-400 text-sm">All walk-in receipts have cash counted recorded.</p>
+          ? <p className="py-4 text-center text-gray-400 text-xs">All walk-in receipts have cash counted recorded.</p>
           : flags.noCash.map((r: any) => (
             <NoCashFix key={r.id} r={r} onFixed={id =>
               setFlags(f => f ? { ...f, noCash: f.noCash.filter((x: any) => x.id !== id) } : f)
@@ -579,7 +579,7 @@ export default function StockCountPage() {
       <div className="space-y-2">
         <p className="text-xs text-gray-400">{flags.missingDays.length} day{flags.missingDays.length !== 1 ? 's' : ''} with no sales receipts (excluding Sundays)</p>
         {flags.missingDays.length === 0
-          ? <p className="py-10 text-center text-gray-400 text-sm">No missing days found.</p>
+          ? <p className="py-4 text-center text-gray-400 text-xs">No missing days found.</p>
           : flags.missingDays.map((r: any) => (
             <MissingDayFix key={r.missing_date} date={r.missing_date} onFixed={d =>
               setFlags(f => f ? { ...f, missingDays: f.missingDays.filter((x: any) => x.missing_date !== d) } : f)
@@ -593,7 +593,7 @@ export default function StockCountPage() {
       <div className="space-y-2">
         <p className="text-xs text-gray-400">{flags.noStaffTimes.length} day{flags.noStaffTimes.length !== 1 ? 's' : ''} with no staff times recorded (excluding Sundays)</p>
         {flags.noStaffTimes.length === 0
-          ? <p className="py-10 text-center text-gray-400 text-sm">All working days have staff times recorded.</p>
+          ? <p className="py-4 text-center text-gray-400 text-xs">All working days have staff times recorded.</p>
           : flags.noStaffTimes.map((r: any) => (
             <NoTimesFix key={r.missing_date} date={r.missing_date} onFixed={d =>
               setFlags(f => f ? { ...f, noStaffTimes: f.noStaffTimes.filter((x: any) => x.missing_date !== d) } : f)
@@ -607,7 +607,7 @@ export default function StockCountPage() {
       <div className="space-y-2">
         <p className="text-xs text-gray-400">{activeDups.length} possible duplicate pair{activeDups.length !== 1 ? 's' : ''} (similarity &gt; 65%)</p>
         {activeDups.length === 0
-          ? <p className="py-10 text-center text-gray-400 text-sm">No duplicate or similar item names found.</p>
+          ? <p className="py-4 text-center text-gray-400 text-xs">No duplicate or similar item names found.</p>
           : activeDups.map((r: any) => (
             <DuplicateFix key={`${r.id1}-${r.id2}`} r={r} onFixed={(id1, id2) => dismissDuplicate(id1, id2)} />
           ))
@@ -619,7 +619,7 @@ export default function StockCountPage() {
       <div className="space-y-2">
         <p className="text-xs text-gray-400">{flags.costGteSell.length} line{flags.costGteSell.length !== 1 ? 's' : ''} where cost price ≥ selling price</p>
         {flags.costGteSell.length === 0
-          ? <p className="py-10 text-center text-gray-400 text-sm">No items sold at or below cost price.</p>
+          ? <p className="py-4 text-center text-gray-400 text-xs">No items sold at or below cost price.</p>
           : flags.costGteSell.map((r: any, i: number) => (
             <CostPriceFix key={`${r.item_id}-${i}`} r={r} onFixed={itemId =>
               setFlags(f => f ? { ...f, costGteSell: f.costGteSell.filter((x: any) => x.item_id !== itemId) } : f)
@@ -633,7 +633,7 @@ export default function StockCountPage() {
       <div className="space-y-2">
         <p className="text-xs text-gray-400">{flags.notInInventory.length} item name{flags.notInInventory.length !== 1 ? 's' : ''} not found in inventory — use Resolve to match them</p>
         {flags.notInInventory.length === 0
-          ? <p className="py-10 text-center text-gray-400 text-sm">All items in receipts and counts are in inventory.</p>
+          ? <p className="py-4 text-center text-gray-400 text-xs">All items in receipts and counts are in inventory.</p>
           : flags.notInInventory.map((r: any, i: number) => (
             <NotInInvRow key={i} r={r} onSwitchTab={() => setTab('Inv. Todo')} />
           ))
@@ -645,7 +645,7 @@ export default function StockCountPage() {
       <div className="space-y-2">
         <p className="text-xs text-gray-400">{flags.noGroup.length} item{flags.noGroup.length !== 1 ? 's' : ''} with no group assigned</p>
         {flags.noGroup.length === 0
-          ? <p className="py-10 text-center text-gray-400 text-sm">All items have a group assigned.</p>
+          ? <p className="py-4 text-center text-gray-400 text-xs">All items have a group assigned.</p>
           : flags.noGroup.map((r: any) => (
             <NoGroupFix key={r.id} r={r} groupNames={flags.groupNames ?? []} onFixed={id =>
               setFlags(f => f ? { ...f, noGroup: f.noGroup.filter((x: any) => x.id !== id) } : f)
@@ -659,7 +659,7 @@ export default function StockCountPage() {
       <div className="space-y-2">
         <p className="text-xs text-gray-400">{flags.uncheckedCab.length} week{flags.uncheckedCab.length !== 1 ? 's' : ''} with no Cash at Bank confirmation recorded</p>
         {flags.uncheckedCab.length === 0
-          ? <p className="py-10 text-center text-gray-400 text-sm">All weeks have a cash-at-bank confirmation.</p>
+          ? <p className="py-4 text-center text-gray-400 text-xs">All weeks have a cash-at-bank confirmation.</p>
           : flags.uncheckedCab.map((r: any) => (
             <div key={r.week_start}
               className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-3 py-2.5 gap-2">
@@ -687,7 +687,7 @@ export default function StockCountPage() {
       <div className="space-y-2">
         <p className="text-xs text-gray-400">{nameRes.unmatched.length} receipt line name{nameRes.unmatched.length !== 1 ? 's' : ''} not matched — search and select the correct inventory item</p>
         {nameRes.unmatched.length === 0
-          ? <p className="py-10 text-center text-gray-400 text-sm">All names matched.</p>
+          ? <p className="py-4 text-center text-gray-400 text-xs">All names matched.</p>
           : nameRes.unmatched.map(u => (
             <NameResolveRow key={u.name} name={u.name} count={u.line_count}
               items={nameRes.items} onResolved={handleResolved} />
@@ -700,7 +700,7 @@ export default function StockCountPage() {
       <div className="space-y-2">
         <p className="text-xs text-gray-400">{nameRes.matched.length} receipt line name{nameRes.matched.length !== 1 ? 's' : ''} matched to inventory</p>
         {nameRes.matched.length === 0
-          ? <p className="py-10 text-center text-gray-400 text-sm">No matched names yet.</p>
+          ? <p className="py-4 text-center text-gray-400 text-xs">No matched names yet.</p>
           : (
             <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto">
               <table className="w-full text-sm">
@@ -747,10 +747,10 @@ export default function StockCountPage() {
   } : {}
 
   return (
-    <div className="py-4 space-y-4">
-      <div>
-        <h1 className="text-xl font-bold">Stock Count & Flags</h1>
-        <p className="text-sm text-gray-400 mt-0.5">{dailyItems.length + overdueItems.length} count{dailyItems.length + overdueItems.length !== 1 ? 's' : ''} pending</p>
+    <div className="py-2 space-y-2">
+      <div className="flex items-baseline gap-2">
+        <h1 className="text-sm font-bold text-gray-900">Stock Count & Flags</h1>
+        <p className="text-[10px] text-gray-400">{dailyItems.length + overdueItems.length} pending</p>
       </div>
 
       {/* Tabs — scrollable on mobile */}
@@ -774,11 +774,11 @@ export default function StockCountPage() {
       {/* Content */}
       {isCountTab ? (
         countItems.length === 0 ? (
-          <p className="py-10 text-center text-gray-400 text-sm">
+          <p className="py-4 text-center text-gray-400 text-xs">
             {tab === 'Daily' ? 'All daily items counted!' : 'All items up to date!'}
           </p>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-1.5">
             {countItems.map(item => (
               <CountCard key={item.item_id} item={item} onSaved={tab === 'Daily' ? removeDaily : removeOverdue} />
             ))}
