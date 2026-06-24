@@ -383,14 +383,16 @@ export default function DayBookPage() {
   const [ledger, setLedger] = useState<{ id: number; name: string } | null>(null)
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/transactions').then(r => r.json()),
-      fetch('/api/transactions/presence').then(r => r.json()),
-    ]).then(([txData, presData]) => {
-      setTxs(Array.isArray(txData) ? txData : [])
-      setPresence(presData && typeof presData === 'object' ? presData : {})
-      setLoading(false)
-    }).catch(() => setLoading(false))
+    fetch('/api/transactions')
+      .then(r => r.json())
+      .then(d => setTxs(Array.isArray(d) ? d : []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+
+    fetch('/api/transactions/presence')
+      .then(r => r.json())
+      .then(d => setPresence(d && typeof d === 'object' ? d : {}))
+      .catch(() => {})
   }, [])
 
   const newLinks = {
