@@ -45,11 +45,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   }
 
-  const { rowCount } = await sql`
+  await sql`
     UPDATE sales_receipt_lines
     SET resolved_name = ${canonical_name}, item_id = ${item_id}
     WHERE LOWER(COALESCE(resolved_name, raw_item_name)) = LOWER(${raw_name})
   `
 
-  return NextResponse.json({ ok: true, updated: rowCount })
+  return NextResponse.json({ ok: true })
 }
