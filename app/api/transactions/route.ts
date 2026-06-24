@@ -47,9 +47,22 @@ export async function GET() {
           COUNT(*)                        AS item_count
         FROM stock_counts
         GROUP BY count_date, counted_by
+
+        UNION ALL
+
+        SELECT
+          'expense'                                           AS type,
+          id,
+          expense_date                                        AS date,
+          COALESCE(expense_account, cf_expense_type, 'Expense') AS description,
+          amount                                              AS total,
+          NULL                                               AS ref,
+          entered_by                                          AS by,
+          1                                                   AS item_count
+        FROM expenses
       ) t
       ORDER BY date DESC, id DESC
-      LIMIT 400
+      LIMIT 500
     `
     return NextResponse.json(rows)
   } catch (e) {

@@ -3,8 +3,8 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type TxType = 'bill' | 'sale' | 'count'
-type Tab = 'All' | 'Sales' | 'Bills' | 'Counts'
+type TxType = 'bill' | 'sale' | 'count' | 'expense'
+type Tab = 'All' | 'Sales' | 'Bills' | 'Counts' | 'Expenses'
 
 type Tx = {
   type: TxType
@@ -17,43 +17,47 @@ type Tx = {
   item_count: number
 }
 
-type BillLine = { item_name: string; quantity: number; unit_price: number; item_total: number; item_id?: number }
-type SaleLine = { id: number; item_name: string; quantity: number; item_price: number; item_total: number; item_id?: number }
-type CountLine = { id: number; item_name: string; quantity_counted: number; notes: string | null; item_id: number | null }
+type Presence = { staff_name: string; actual_in: string | null; actual_out: string | null }
 
-type DayRow = { date: string; wic_qty: string | null; gmc_qty: string | null; bills_qty: string | null; qty_counted: string | null }
+type BillLine    = { item_name: string; quantity: number; unit_price: number; item_total: number }
+type SaleLine    = { id: number; item_name: string; quantity: number; item_price: number; item_total: number; item_id?: number }
+type CountLine   = { id: number; item_name: string; quantity_counted: number; notes: string | null; item_id: number | null }
+
+type DayRow      = { date: string; wic_qty: string | null; gmc_qty: string | null; bills_qty: string | null; qty_counted: string | null }
 type ComputedRow = DayRow & { expected_soh: number | null; loss: number | null }
-
-type ItemDetail = {
-  id: number
-  canonical_name: string
-  cf_group: string | null
-  selling_price: number | null
-  purchase_rate: number | null
-  calculated_soh: number | null
-}
+type ItemDetail  = { id: number; canonical_name: string; cf_group: string | null; selling_price: number | null; purchase_rate: number | null; calculated_soh: number | null }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const TABS: Tab[] = ['All', 'Sales', 'Bills', 'Counts']
+const TABS: Tab[] = ['All', 'Sales', 'Bills', 'Counts', 'Expenses']
 
-const TYPE_LABEL: Record<TxType, string> = { bill: 'Bill', sale: 'Sale', count: 'Count' }
+const TYPE_LABEL: Record<TxType, string> = { bill: 'Bill', sale: 'Sale', count: 'Count', expense: 'Expense' }
 const TYPE_COLOR: Record<TxType, string> = {
-  bill:  'bg-orange-100 text-orange-700',
-  sale:  'bg-green-100 text-green-700',
-  count: 'bg-blue-100 text-blue-700',
+  bill:    'bg-orange-100 text-orange-700',
+  sale:    'bg-green-100 text-green-700',
+  count:   'bg-blue-100 text-blue-700',
+  expense: 'bg-red-100 text-red-700',
 }
 const TYPE_DOT: Record<TxType, string> = {
-  bill:  'bg-orange-400',
-  sale:  'bg-green-400',
-  count: 'bg-blue-400',
+  bill:    'bg-orange-400',
+  sale:    'bg-green-400',
+  count:   'bg-blue-400',
+  expense: 'bg-red-400',
 }
 
 function fmt(n: number) { return n % 1 === 0 ? n.toString() : n.toFixed(2) }
-function fmtMoney(n: number) { return `₵${n.toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` }
-
+function fmtMoney(n: number) {
+  return `₵${n.toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
 function fmtDate(iso: string) {
-  const d = new Date(iso + 'T00:00:00')
-  return d.toLocaleDateString('en-GH', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+  return new Date(iso + 'T00:00:00').toLocaleDateString('en-GH', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  })
+}
+function fmtTime(iso: string | null) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleTimeString('en-GH', {
+    hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Accra',
+  })
 }
 
 function groupByDate(txs: Tx[]) {
@@ -70,14 +74,12 @@ function numVal(v: string | null) { return v == null ? null : parseFloat(v) }
 function computeLedger(rows: DayRow[]): ComputedRow[] {
   let prev: number | null = null
   return rows.map(row => {
-    const bills = numVal(row.bills_qty) ?? 0
-    const wic   = numVal(row.wic_qty)   ?? 0
-    const gmc   = numVal(row.gmc_qty)   ?? 0
+    const bills   = numVal(row.bills_qty) ?? 0
+    const wic     = numVal(row.wic_qty)   ?? 0
+    const gmc     = numVal(row.gmc_qty)   ?? 0
     const counted = numVal(row.qty_counted)
-
     let expected: number | null = null
     let loss: number | null = null
-
     if (prev !== null) {
       expected = parseFloat((prev + bills - wic - gmc).toFixed(4))
       if (counted !== null) { loss = parseFloat((expected - counted).toFixed(4)); prev = counted }
@@ -85,7 +87,6 @@ function computeLedger(rows: DayRow[]): ComputedRow[] {
     } else if (counted !== null) {
       prev = counted
     }
-
     return { ...row, expected_soh: expected, loss }
   })
 }
@@ -111,18 +112,14 @@ function ItemLedger({ itemId, itemName, onClose }: { itemId: number; itemName: s
 
   function fmtQ(v: string | null) {
     if (v == null) return <span className="text-gray-300">—</span>
-    const n = parseFloat(v)
-    return <span>{fmt(n)}</span>
+    return <span>{fmt(parseFloat(v))}</span>
   }
 
   return (
     <div className="fixed inset-0 z-50 flex" onClick={onClose}>
-      {/* Backdrop */}
       <div className="flex-1 bg-black/40" />
-      {/* Panel — slides in from right */}
       <div className="w-full max-w-md bg-white h-full overflow-y-auto shadow-2xl flex flex-col"
         onClick={e => e.stopPropagation()}>
-        {/* Header */}
         <div className="px-4 py-4 border-b border-gray-200 flex items-start justify-between gap-3 sticky top-0 bg-white z-10">
           <div>
             <p className="font-bold text-gray-900 text-base leading-tight">{itemName}</p>
@@ -135,7 +132,6 @@ function ItemLedger({ itemId, itemName, onClose }: { itemId: number; itemName: s
           <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
         ) : (
           <>
-            {/* Item stats */}
             {detail && (
               <div className="px-4 py-3 grid grid-cols-4 gap-2 text-xs border-b border-gray-100">
                 <div><p className="text-gray-400">SOH</p><p className="font-bold text-gray-900">{detail.calculated_soh ?? '—'}</p></div>
@@ -149,8 +145,6 @@ function ItemLedger({ itemId, itemName, onClose }: { itemId: number; itemName: s
                 </div>
               </div>
             )}
-
-            {/* Ledger table */}
             {rows.length === 0 ? (
               <p className="text-center text-gray-400 text-sm py-12">No activity found.</p>
             ) : (
@@ -205,6 +199,38 @@ function ItemLedger({ itemId, itemName, onClose }: { itemId: number; itemName: s
   )
 }
 
+// ─── Staff Presence Strip ─────────────────────────────────────────────────────
+function PresenceStrip({ staff }: { staff: Presence[] }) {
+  const [open, setOpen] = useState(false)
+
+  if (!staff.length) return null
+
+  const names = staff.map(s => s.staff_name).join(' · ')
+
+  return (
+    <div className="bg-gray-50 border border-gray-200 rounded-xl overflow-hidden mb-2">
+      <button onClick={() => setOpen(v => !v)}
+        className="w-full text-left px-4 py-2.5 flex items-center gap-2">
+        <span className="text-sm">👥</span>
+        <span className="text-xs font-semibold text-gray-600 flex-1 truncate">{names}</span>
+        <span className="text-gray-400 text-xs shrink-0">{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div className="border-t border-gray-200 divide-y divide-gray-100">
+          {staff.map(s => (
+            <div key={s.staff_name} className="px-4 py-2 flex items-center justify-between text-xs">
+              <span className="font-semibold text-gray-800 capitalize">{s.staff_name}</span>
+              <span className="text-gray-500">
+                {fmtTime(s.actual_in)} → {fmtTime(s.actual_out)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Transaction Row ──────────────────────────────────────────────────────────
 function TxRow({ tx, onItemTap }: { tx: Tx; onItemTap: (id: number, name: string) => void }) {
   const [open, setOpen] = useState(false)
@@ -212,6 +238,7 @@ function TxRow({ tx, onItemTap }: { tx: Tx; onItemTap: (id: number, name: string
   const [loading, setLoading] = useState(false)
 
   async function toggle() {
+    if (tx.type === 'expense') return // expenses have no lines to expand
     if (!open && !lines.length) {
       setLoading(true)
       try {
@@ -228,42 +255,46 @@ function TxRow({ tx, onItemTap }: { tx: Tx; onItemTap: (id: number, name: string
   }
 
   const total = tx.total ? Number(tx.total) : null
+  const expandable = tx.type !== 'expense'
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-      {/* Main row */}
-      <button onClick={toggle} className="w-full text-left px-4 py-3 flex items-center gap-3">
+      <button onClick={toggle} className="w-full text-left px-4 py-3 flex items-center gap-3"
+        style={{ cursor: expandable ? 'pointer' : 'default' }}>
         <div className={`w-2 h-2 rounded-full shrink-0 ${TYPE_DOT[tx.type]}`} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide ${TYPE_COLOR[tx.type]}`}>
               {TYPE_LABEL[tx.type]}
             </span>
-            {tx.ref && <span className="text-[10px] text-gray-400 font-mono">{tx.ref}</span>}
+            {tx.ref && <span className="text-[10px] text-gray-400 font-mono truncate">{tx.ref}</span>}
           </div>
           <p className="text-sm font-semibold text-gray-900 mt-0.5 truncate">
             {tx.description || (tx.type === 'sale' ? 'Walk-in Customer' : '—')}
           </p>
           <p className="text-[11px] text-gray-400 mt-0.5">
-            {tx.item_count} item{tx.item_count !== 1 ? 's' : ''}
-            {tx.by ? ` · ${tx.by}` : ''}
+            {tx.type !== 'expense' && `${tx.item_count} item${tx.item_count !== 1 ? 's' : ''} · `}
+            {tx.by ?? ''}
           </p>
         </div>
         <div className="text-right shrink-0">
           {total != null && (
-            <p className="text-sm font-bold text-gray-900">{fmtMoney(total)}</p>
+            <p className={`text-sm font-bold ${tx.type === 'expense' ? 'text-red-600' : 'text-gray-900'}`}>
+              {fmtMoney(total)}
+            </p>
           )}
-          <p className="text-gray-400 text-xs mt-0.5">{open ? '▲' : '▼'}</p>
+          {expandable && (
+            <p className="text-gray-400 text-xs mt-0.5">{open ? '▲' : '▼'}</p>
+          )}
         </div>
       </button>
 
-      {/* Expanded lines */}
-      {open && (
+      {open && expandable && (
         <div className="border-t border-gray-100">
           {loading ? (
             <p className="text-xs text-gray-400 px-4 py-3">Loading…</p>
           ) : lines.length === 0 ? (
-            <p className="text-xs text-gray-400 px-4 py-3">No items.</p>
+            <p className="text-xs text-gray-400 px-4 py-3">No items found.</p>
           ) : (
             <div className="divide-y divide-gray-50">
               {tx.type === 'bill' && (lines as BillLine[]).map((l, i) => (
@@ -275,10 +306,9 @@ function TxRow({ tx, onItemTap }: { tx: Tx; onItemTap: (id: number, name: string
                   </div>
                 </div>
               ))}
-
               {tx.type === 'sale' && (lines as SaleLine[]).map((l, i) => (
                 <button key={i} onClick={() => l.item_id && onItemTap(l.item_id, l.item_name)}
-                  className="w-full text-left px-4 py-2.5 flex items-center justify-between gap-2 hover:bg-blue-50 transition">
+                  className="w-full text-left px-4 py-2.5 flex items-center justify-between gap-2 hover:bg-blue-50 active:bg-blue-100 transition">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <p className="text-sm text-gray-800 truncate">{l.item_name}</p>
                     {l.item_id && <span className="text-[10px] text-blue-500 shrink-0">→ ledger</span>}
@@ -289,10 +319,9 @@ function TxRow({ tx, onItemTap }: { tx: Tx; onItemTap: (id: number, name: string
                   </div>
                 </button>
               ))}
-
               {tx.type === 'count' && (lines as CountLine[]).map((l, i) => (
                 <button key={i} onClick={() => l.item_id && onItemTap(l.item_id, l.item_name)}
-                  className="w-full text-left px-4 py-2.5 flex items-center justify-between gap-2 hover:bg-blue-50 transition">
+                  className="w-full text-left px-4 py-2.5 flex items-center justify-between gap-2 hover:bg-blue-50 active:bg-blue-100 transition">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <p className="text-sm text-gray-800 truncate">{l.item_name}</p>
                     {l.item_id && <span className="text-[10px] text-blue-500 shrink-0">→ ledger</span>}
@@ -308,10 +337,45 @@ function TxRow({ tx, onItemTap }: { tx: Tx; onItemTap: (id: number, name: string
   )
 }
 
+// ─── Day Group ────────────────────────────────────────────────────────────────
+function DayGroup({ date, txs, presence, onItemTap }: {
+  date: string
+  txs: Tx[]
+  presence: Presence[]
+  onItemTap: (id: number, name: string) => void
+}) {
+  const salesTotal = txs.filter(t => t.type === 'sale').reduce((s, t) => s + Number(t.total ?? 0), 0)
+  const expenseTotal = txs.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.total ?? 0), 0)
+
+  return (
+    <div>
+      {/* Date header */}
+      <div className="flex items-baseline justify-between mb-2 px-1">
+        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">{fmtDate(date)}</p>
+        <div className="flex gap-3 text-xs">
+          {salesTotal > 0 && <span className="text-green-600 font-semibold">{fmtMoney(salesTotal)}</span>}
+          {expenseTotal > 0 && <span className="text-red-500 font-semibold">-{fmtMoney(expenseTotal)}</span>}
+        </div>
+      </div>
+
+      {/* Staff presence strip */}
+      <PresenceStrip staff={presence} />
+
+      {/* Transactions */}
+      <div className="space-y-2">
+        {txs.map((tx, i) => (
+          <TxRow key={`${tx.type}-${tx.id}-${i}`} tx={tx} onItemTap={onItemTap} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
-export default function TransactionsPage() {
+export default function DayBookPage() {
   const [tab, setTab] = useState<Tab>('All')
   const [txs, setTxs] = useState<Tx[]>([])
+  const [presence, setPresence] = useState<Record<string, Presence[]>>({})
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [dateFrom, setDateFrom] = useState('')
@@ -319,25 +383,29 @@ export default function TransactionsPage() {
   const [ledger, setLedger] = useState<{ id: number; name: string } | null>(null)
 
   useEffect(() => {
-    fetch('/api/transactions')
-      .then(r => r.json())
-      .then(d => { setTxs(Array.isArray(d) ? d : []); setLoading(false) })
-      .catch(() => setLoading(false))
+    Promise.all([
+      fetch('/api/transactions').then(r => r.json()),
+      fetch('/api/transactions/presence').then(r => r.json()),
+    ]).then(([txData, presData]) => {
+      setTxs(Array.isArray(txData) ? txData : [])
+      setPresence(presData && typeof presData === 'object' ? presData : {})
+      setLoading(false)
+    }).catch(() => setLoading(false))
   }, [])
 
-  const newHref = tab === 'Bills' ? '/bills/new'
-    : tab === 'Counts' ? '/stock/counts'
-    : '/sales/new'
-
-  const newLabel = tab === 'Bills' ? '+ New Bill'
-    : tab === 'Counts' ? '+ New Count'
-    : tab === 'Sales' ? '+ New Sale'
-    : '+ New'
+  const newLinks = {
+    Sales: '/sales/new',
+    Bills: '/bills/new',
+    Counts: '/stock/counts',
+    Expenses: '/expenses',
+    All: '/sales/new',
+  }
 
   const filtered = txs.filter(tx => {
-    if (tab === 'Sales'  && tx.type !== 'sale')  return false
-    if (tab === 'Bills'  && tx.type !== 'bill')  return false
-    if (tab === 'Counts' && tx.type !== 'count') return false
+    if (tab === 'Sales'    && tx.type !== 'sale')    return false
+    if (tab === 'Bills'    && tx.type !== 'bill')    return false
+    if (tab === 'Counts'   && tx.type !== 'count')   return false
+    if (tab === 'Expenses' && tx.type !== 'expense') return false
     if (dateFrom && tx.date < dateFrom) return false
     if (dateTo   && tx.date > dateTo)   return false
     if (search) {
@@ -358,24 +426,19 @@ export default function TransactionsPage() {
     <div className="py-4 max-w-2xl space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-xl font-bold text-gray-900">Transactions</h1>
-        <Link href={tab === 'All' ? '/sales/new' : newHref}
+        <h1 className="text-xl font-bold text-gray-900">Day Book</h1>
+        <Link href={newLinks[tab]}
           className="bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition">
-          {tab === 'All' ? (
-            <span className="flex items-center gap-1.5">
-              <span>+ New</span>
-              <span className="text-blue-200 text-xs">▾</span>
-            </span>
-          ) : newLabel}
+          {tab === 'All' ? '+ New' : `+ New ${tab.slice(0, -1)}`}
         </Link>
       </div>
 
-      {/* Tab filter */}
+      {/* Tabs */}
       <div className="overflow-x-auto -mx-4 px-4">
         <div className="flex gap-1 bg-gray-100 rounded-xl p-1 min-w-max">
           {TABS.map(t => (
             <button key={t} onClick={() => setTab(t)}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition whitespace-nowrap
+              className={`px-3 py-2 rounded-lg text-sm font-semibold transition whitespace-nowrap
                 ${tab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
               {t}
             </button>
@@ -383,22 +446,17 @@ export default function TransactionsPage() {
         </div>
       </div>
 
-      {/* "+ New" sub-options when on All tab */}
+      {/* New entry shortcuts on All tab */}
       {tab === 'All' && (
-        <div className="flex gap-2">
-          <Link href="/sales/new" className="flex-1 text-center text-xs font-semibold py-2 rounded-xl bg-green-50 text-green-700 hover:bg-green-100 transition">
-            + Sale
-          </Link>
-          <Link href="/bills/new" className="flex-1 text-center text-xs font-semibold py-2 rounded-xl bg-orange-50 text-orange-700 hover:bg-orange-100 transition">
-            + Bill
-          </Link>
-          <Link href="/stock/counts" className="flex-1 text-center text-xs font-semibold py-2 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 transition">
-            + Count
-          </Link>
+        <div className="grid grid-cols-4 gap-2">
+          <Link href="/sales/new"  className="text-center text-xs font-semibold py-2 rounded-xl bg-green-50  text-green-700  hover:bg-green-100  transition">+ Sale</Link>
+          <Link href="/bills/new"  className="text-center text-xs font-semibold py-2 rounded-xl bg-orange-50 text-orange-700 hover:bg-orange-100 transition">+ Bill</Link>
+          <Link href="/stock/counts" className="text-center text-xs font-semibold py-2 rounded-xl bg-blue-50   text-blue-700   hover:bg-blue-100   transition">+ Count</Link>
+          <Link href="/expenses"   className="text-center text-xs font-semibold py-2 rounded-xl bg-red-50    text-red-700    hover:bg-red-100    transition">+ Expense</Link>
         </div>
       )}
 
-      {/* Search + date filters */}
+      {/* Search + date */}
       <div className="space-y-2">
         <input value={search} onChange={e => setSearch(e.target.value)}
           placeholder="Search vendor, customer, staff…"
@@ -411,9 +469,7 @@ export default function TransactionsPage() {
         </div>
         {(search || dateFrom || dateTo) && (
           <button onClick={() => { setSearch(''); setDateFrom(''); setDateTo('') }}
-            className="text-xs text-blue-600 font-semibold">
-            Clear filters
-          </button>
+            className="text-xs text-blue-600 font-semibold">Clear filters</button>
         )}
       </div>
 
@@ -421,25 +477,21 @@ export default function TransactionsPage() {
       {loading ? (
         <p className="text-center text-gray-400 py-16 text-sm">Loading…</p>
       ) : dates.length === 0 ? (
-        <p className="text-center text-gray-400 py-16 text-sm">No transactions found.</p>
+        <p className="text-center text-gray-400 py-16 text-sm">No entries found.</p>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-8">
           {dates.map(date => (
-            <div key={date}>
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 px-1">
-                {fmtDate(date)}
-              </p>
-              <div className="space-y-2">
-                {grouped.get(date)!.map((tx, i) => (
-                  <TxRow key={`${tx.type}-${tx.id}-${i}`} tx={tx} onItemTap={openLedger} />
-                ))}
-              </div>
-            </div>
+            <DayGroup
+              key={date}
+              date={date}
+              txs={grouped.get(date)!}
+              presence={presence[date] ?? []}
+              onItemTap={openLedger}
+            />
           ))}
         </div>
       )}
 
-      {/* Item Ledger slide-in */}
       {ledger && (
         <ItemLedger itemId={ledger.id} itemName={ledger.name} onClose={() => setLedger(null)} />
       )}

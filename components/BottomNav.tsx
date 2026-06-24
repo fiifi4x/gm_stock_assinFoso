@@ -7,7 +7,7 @@ type Props = { role: string }
 
 const row1Base = [
   { href: '/stock/count', label: 'Flags', icon: '\u{1F6A9}' },
-  { href: '/transactions', label: 'Transactions', icon: '\u{1F4B1}' },
+  { href: '/transactions', label: 'Day Book', icon: '\u{1F4D2}' },
   { href: '/expenses', label: 'Expenses', icon: '\u{1F4B8}' },
   { href: '/item', label: 'Items', icon: '\u{1F4E6}' },
 ]
