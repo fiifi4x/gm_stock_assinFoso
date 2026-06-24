@@ -157,12 +157,15 @@ export async function GET() {
       ORDER BY sr.receipt_date DESC
     `),
 
-    // 5. Item names in receipts or counts not in inventory
+    // 5. Item names in receipts or counts not matching any canonical_name in inventory
     safeQuery(() => sql`
       SELECT item_name, source FROM (
         SELECT DISTINCT COALESCE(resolved_name, raw_item_name) AS item_name, 'Sales Receipt' AS source
         FROM sales_receipt_lines
-        WHERE item_id IS NULL
+        WHERE NOT EXISTS (
+          SELECT 1 FROM items i
+          WHERE LOWER(i.canonical_name) = LOWER(COALESCE(resolved_name, raw_item_name))
+        )
         UNION
         SELECT DISTINCT item_name, 'Stock Count' AS source
         FROM stock_counts sc
