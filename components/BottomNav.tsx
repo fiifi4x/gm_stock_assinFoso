@@ -9,6 +9,7 @@ const row1Base = [
   { href: '/stock/count', label: 'Flags', icon: '\u{1F6A9}' },
   { href: '/sales', label: 'Sales', icon: '\u{1F9FE}' },
   { href: '/bills', label: 'Bills', icon: '\u{1F4CB}' },
+  { href: '/stock/counts', label: 'Counts', icon: '\u{1F4DD}' },
   { href: '/transactions', label: 'Day Book', icon: '\u{1F4D2}' },
 ]
 
@@ -51,7 +52,7 @@ export default function BottomNav({ role }: Props) {
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-      <div className="grid grid-cols-4 px-2 pt-1.5 gap-x-1">
+      <div className="grid grid-cols-5 px-2 pt-1.5 gap-x-1">
         {row1Base.map(t => <Tab key={t.href} {...t} active={isActive(t.href)} />)}
       </div>
       <div className={`grid px-2 pt-1 pb-1.5 gap-x-1 ${row2.length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
