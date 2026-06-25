@@ -12,7 +12,6 @@ export default function NewReceiptPage() {
   const [allItems, setAllItems] = useState<Item[]>([])
   const [loadingItems, setLoadingItems] = useState(true)
   const [search, setSearch] = useState('')
-  const [searchFocused, setSearchFocused] = useState(false)
   const [activeGroup, setActiveGroup] = useState<string | null>(null)
   const [cart, setCart] = useState<CartLine[]>([])
   const [saving, setSaving] = useState(false)
@@ -33,16 +32,14 @@ export default function NewReceiptPage() {
 
   // Items shown in catalogue panel
   const catalogueItems = (() => {
-    let items = allItems
     if (search.trim()) {
       const q = search.toLowerCase()
-      items = items.filter(i => i.name.toLowerCase().includes(q) || (i.group ?? '').toLowerCase().includes(q))
-    } else if (activeGroup && activeGroup !== 'All') {
-      items = items.filter(i => (i.group ?? 'Other') === activeGroup)
-    } else if (!searchFocused && !activeGroup) {
-      return [] // show nothing until search focused or group selected
+      return allItems.filter(i => i.name.toLowerCase().includes(q) || (i.group ?? '').toLowerCase().includes(q))
     }
-    return items
+    if (activeGroup && activeGroup !== 'All') {
+      return allItems.filter(i => (i.group ?? 'Other') === activeGroup)
+    }
+    return allItems
   })()
 
   function addToCart(item: Item) {
@@ -115,9 +112,7 @@ export default function NewReceiptPage() {
           <input
             value={search}
             onChange={e => { setSearch(e.target.value); setActiveGroup(null) }}
-            onFocus={() => setSearchFocused(true)}
-            onBlur={() => setSearchFocused(false)}
-            placeholder={loadingItems ? 'Loading…' : `Search ${allItems.length} items…`}
+placeholder={loadingItems ? 'Loading…' : `Search ${allItems.length} items…`}
             disabled={loadingItems}
             className="w-full text-[11px] text-gray-900 placeholder-gray-300 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-blue-400"
           />
@@ -139,8 +134,6 @@ export default function NewReceiptPage() {
         <div className="flex-1 overflow-y-auto min-h-0">
           {loadingItems ? (
             <p className="text-[10px] text-gray-400 text-center py-6">Loading…</p>
-          ) : !activeGroup && !search.trim() ? (
-            <p className="text-[10px] text-gray-400 text-center py-6">Select a group or search</p>
           ) : catalogueItems.length === 0 ? (
             <p className="text-[10px] text-gray-400 text-center py-6">No items found</p>
           ) : (
