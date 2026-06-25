@@ -44,6 +44,7 @@ export async function GET() {
       FROM sales_receipt_lines srl
       JOIN sales_receipts sr ON sr.id = srl.receipt_id
       WHERE srl.item_price IS NOT NULL
+        AND (sr.customer_name IS NULL OR sr.customer_name <> 'Grony Multimedia as Customer')
       GROUP BY srl.item_id, sr.receipt_date::date
     ),
     daily_cost_price AS (
