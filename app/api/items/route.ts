@@ -2,24 +2,41 @@ import sql from '@/lib/db'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
-  const rows = await sql`
-    SELECT
-      i.id,
-      i.canonical_name AS item_name,
-      i.cf_group,
-      i.selling_rate,
-      i.purchase_rate,
-      i.units_per_pack,
-      i.unit_name,
-      COALESCE(s.calculated_soh, 0) AS calculated_soh
-    FROM items i
-    LEFT JOIN item_stock_summary s ON s.item_id = i.id
-    WHERE i.canonical_name NOT ILIKE 'old stop%'
-      AND i.canonical_name NOT ILIKE 'service%'
-      AND i.canonical_name NOT ILIKE 'old- stop%'
-    ORDER BY i.cf_group NULLS LAST, i.canonical_name
-  `
-  return NextResponse.json(rows)
+  try {
+    const rows = await sql`
+      SELECT
+        i.id,
+        i.canonical_name AS item_name,
+        i.cf_group,
+        i.selling_rate,
+        i.purchase_rate,
+        i.units_per_pack,
+        i.unit_name,
+        COALESCE(s.calculated_soh, 0) AS calculated_soh
+      FROM items i
+      LEFT JOIN item_stock_summary s ON s.item_id = i.id
+      WHERE LOWER(i.status) NOT IN ('inactive', 'service')
+      ORDER BY i.cf_group NULLS LAST, i.canonical_name
+    `
+    return NextResponse.json(rows)
+  } catch {
+    // Fallback if status column is unavailable for any reason
+    const rows = await sql`
+      SELECT
+        i.id,
+        i.canonical_name AS item_name,
+        i.cf_group,
+        i.selling_rate,
+        i.purchase_rate,
+        i.units_per_pack,
+        i.unit_name,
+        COALESCE(s.calculated_soh, 0) AS calculated_soh
+      FROM items i
+      LEFT JOIN item_stock_summary s ON s.item_id = i.id
+      ORDER BY i.cf_group NULLS LAST, i.canonical_name
+    `
+    return NextResponse.json(rows)
+  }
 }
 
 export async function POST(req: Request) {
