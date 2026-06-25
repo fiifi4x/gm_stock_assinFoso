@@ -6,7 +6,8 @@ type Item = { id: number; name: string; group: string | null; soh: number; selli
 type CartLine = { item: Item; qty: number; price: number }
 
 export default function NewReceiptPage() {
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [date, setDate] = useState('')
+  useEffect(() => { setDate(new Date().toISOString().slice(0, 10)) }, [])
   const [customer, setCustomer] = useState('')
   const [cashCounted, setCashCounted] = useState('')
   const [allItems, setAllItems] = useState<Item[]>([])
@@ -61,7 +62,7 @@ export default function NewReceiptPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         date,
-        customer: customer || 'Walk In Customer',
+        customerName: customer || 'Walk In Customer',
         cashCounted: cashCounted ? Number(cashCounted) : null,
         lines: cart.map(l => ({
           itemId: l.item.id,
