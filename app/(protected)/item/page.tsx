@@ -20,6 +20,8 @@ type DayRow = {
   wic_qty: string | null
   gmc_qty: string | null
   bills_qty: string | null
+  sell_price: string | null
+  cost_price: string | null
 }
 
 type ComputedRow = DayRow & { expected_soh: number | null; loss: number | null }
@@ -550,14 +552,16 @@ export default function InventoryPage() {
                         <p className="text-[10px] text-gray-400 text-center py-4">No activity.</p>
                       ) : (
                         <div className="overflow-x-auto">
-                          <table className="w-full border-collapse text-[9px] min-w-[280px]">
+                          <table className="w-full border-collapse text-[9px] min-w-[340px]">
                             <thead>
                               <tr>
                                 <th className="text-left px-0.5 py-1 font-semibold text-gray-500 border-b border-gray-200">DATE</th>
                                 <th className="text-right px-0.5 py-1 font-semibold text-gray-500 border-b border-gray-200">CNT</th>
                                 <th className="text-right px-0.5 py-1 font-semibold text-gray-500 border-b border-gray-200">-WIC</th>
                                 <th className="text-right px-0.5 py-1 font-semibold text-gray-500 border-b border-gray-200">-GMC</th>
+                                <th className="text-right px-0.5 py-1 font-semibold text-gray-500 border-b border-gray-200">SP</th>
                                 <th className="text-right px-0.5 py-1 font-semibold text-gray-500 border-b border-gray-200">+BL</th>
+                                <th className="text-right px-0.5 py-1 font-semibold text-gray-500 border-b border-gray-200">CP</th>
                                 <th className="text-right px-0.5 py-1 font-semibold text-gray-500 border-b border-gray-200">EXP</th>
                                 <th className="text-right px-0.5 py-1 font-semibold text-gray-500 border-b border-gray-200">L/G</th>
                               </tr>
@@ -569,7 +573,9 @@ export default function InventoryPage() {
                                   <td className="px-0.5 py-0.5 text-right font-semibold text-gray-900">{fmtQ(row.qty_counted)}</td>
                                   <td className="px-0.5 py-0.5 text-right text-gray-600">{fmtQ(row.wic_qty)}</td>
                                   <td className="px-0.5 py-0.5 text-right text-gray-600">{fmtQ(row.gmc_qty)}</td>
+                                  <td className="px-0.5 py-0.5 text-right text-blue-500">{fmtQ(row.sell_price)}</td>
                                   <td className="px-0.5 py-0.5 text-right text-blue-600">{fmtQ(row.bills_qty)}</td>
+                                  <td className="px-0.5 py-0.5 text-right text-green-600">{fmtQ(row.cost_price)}</td>
                                   <td className="px-0.5 py-0.5 text-right text-gray-400">{fmtN(row.expected_soh)}</td>
                                   <td className="px-0.5 py-0.5 text-right font-semibold">
                                     {row.loss === null ? <span className="text-gray-300">—</span>
@@ -582,7 +588,7 @@ export default function InventoryPage() {
                             </tbody>
                             <tfoot>
                               <tr className="border-t-2 border-gray-200 bg-gray-50">
-                                <td colSpan={6} className="px-0.5 py-1 text-right font-bold text-gray-500">Total L/G</td>
+                                <td colSpan={8} className="px-0.5 py-1 text-right font-bold text-gray-500">Total L/G</td>
                                 <td className={`px-0.5 py-1 text-right font-bold ${totalLoss > 0 ? 'text-red-600' : totalLoss < 0 ? 'text-green-600' : 'text-gray-400'}`}>
                                   {totalLoss > 0 ? '+' : ''}{fmtN(totalLoss)}
                                 </td>
