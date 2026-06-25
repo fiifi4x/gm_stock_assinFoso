@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
-type Item = { id: number; name: string; group: string | null; soh: number; selling_price: number }
+type Item = { id: number; name: string; group: string | null; soh: number; selling_price: string | number }
 type CartLine = { item: Item; qty: number; price: number }
 
 export default function NewReceiptPage() {
@@ -38,7 +38,7 @@ export default function NewReceiptPage() {
       if (existing >= 0) {
         return prev.map((l, i) => i === existing ? { ...l, qty: l.qty + 1 } : l)
       }
-      return [...prev, { item, qty: 1, price: item.selling_price }]
+      return [...prev, { item, qty: 1, price: Number(item.selling_price) }]
     })
   }
 
@@ -206,7 +206,7 @@ export default function NewReceiptPage() {
                     <p className="text-[9px] text-gray-400 leading-tight">{item.group ?? ''}{item.group ? ' · ' : ''}SOH: {item.soh}</p>
                   </div>
                   <div className="shrink-0 flex items-center gap-2">
-                    <span className="text-xs font-bold text-gray-700">₵{item.selling_price.toFixed(2)}</span>
+                    <span className="text-xs font-bold text-gray-700">₵{Number(item.selling_price).toFixed(2)}</span>
                     {inCart ? (
                       <span className="text-[9px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">×{inCart.qty}</span>
                     ) : (
