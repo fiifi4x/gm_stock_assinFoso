@@ -26,11 +26,11 @@ export default function CountsHistoryPage() {
   const [records, setRecords] = useState<CountRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [selected, setSelected] = useState<CountRecord | null>(null)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
   const [editQty, setEditQty] = useState('')
   const [editNotes, setEditNotes] = useState('')
   const [saving, setSaving] = useState(false)
-  const [editing, setEditing] = useState(false)
+  const [editingId, setEditingId] = useState<number | null>(null)
 
   useEffect(() => {
     fetch('/api/stock/counts').then(r => r.json()).then(d => { setRecords(d); setLoading(false) })
@@ -47,30 +47,29 @@ export default function CountsHistoryPage() {
     )
   }, [records, search])
 
-  function selectRecord(r: CountRecord) {
-    setSelected(r)
-    setEditing(false)
+  function jumpTo(r: CountRecord) {
+    setSelectedId(r.id)
+    document.getElementById(`count-${r.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   function startEdit(r: CountRecord) {
     setEditQty(String(r.quantity_counted))
     setEditNotes(r.notes ?? '')
-    setEditing(true)
+    setEditingId(r.id)
   }
 
   async function saveEdit() {
-    if (!selected) return
+    if (editingId == null) return
     setSaving(true)
-    const res = await fetch(`/api/stock/counts/${selected.id}`, {
+    const res = await fetch(`/api/stock/counts/${editingId}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ quantity_counted: Number(editQty), notes: editNotes }),
     })
     setSaving(false)
     if (res.ok) {
       const updated: CountRecord = await res.json()
-      setRecords(prev => prev.map(r => r.id === selected.id ? { ...r, ...updated } : r))
-      setSelected(s => s ? { ...s, ...updated } : s)
-      setEditing(false)
+      setRecords(prev => prev.map(r => r.id === editingId ? { ...r, ...updated } : r))
+      setEditingId(null)
     }
   }
 
@@ -101,8 +100,8 @@ export default function CountsHistoryPage() {
             </thead>
             <tbody>
               {filtered.map(r => (
-                <tr key={r.id} onClick={() => selectRecord(r)}
-                  className={`cursor-pointer border-b border-gray-100 transition ${selected?.id === r.id ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                <tr key={r.id} onClick={() => jumpTo(r)}
+                  className={`cursor-pointer border-b border-gray-100 transition ${selectedId === r.id ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
                   <td className="px-0.5 py-0.5 text-gray-700 whitespace-nowrap">{fmtShort(r.count_date)}</td>
                   <td className="px-0.5 py-0.5 text-gray-900 truncate max-w-[80px]">{r.item_name}</td>
                   <td className="px-0.5 py-0.5 text-right font-semibold text-gray-900">{Number(r.quantity_counted)}</td>
@@ -113,73 +112,80 @@ export default function CountsHistoryPage() {
           </table>
         </div>
 
-        {/* RIGHT: detail / edit */}
+        {/* RIGHT: every record, stacked continuously */}
         <div className="w-1/2 overflow-y-auto min-h-0 bg-white">
-          {!selected ? (
-            <p className="text-[10px] text-gray-400 text-center py-10">Select a record</p>
-          ) : editing ? (
-            <div className="p-2 space-y-2">
-              <p className="text-[10px] font-bold text-gray-900 truncate">{selected.item_name}</p>
-              <div>
-                <p className="text-[9px] text-gray-400 mb-0.5">Qty Counted</p>
-                <input type="number" min="0" step="any" value={editQty}
-                  onChange={e => setEditQty(e.target.value)} className={inputCls} />
-              </div>
-              <div>
-                <p className="text-[9px] text-gray-400 mb-0.5">Notes</p>
-                <input value={editNotes} onChange={e => setEditNotes(e.target.value)}
-                  placeholder="Optional" className={inputCls} />
-              </div>
-              <div className="flex gap-1">
-                <button onClick={saveEdit} disabled={saving}
-                  className="flex-1 bg-green-600 text-white text-[10px] font-bold rounded py-1 disabled:opacity-40">
-                  {saving ? 'Saving…' : 'Save'}
-                </button>
-                <button onClick={() => setEditing(false)}
-                  className="px-3 py-1 bg-gray-100 text-gray-600 text-[10px] font-semibold rounded">
-                  Cancel
-                </button>
-              </div>
-            </div>
+          {filtered.length === 0 ? (
+            <p className="text-[10px] text-gray-400 text-center py-10">No records found</p>
           ) : (
-            <div className="p-2 space-y-2">
-              <div className="flex items-start justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-bold text-gray-900 leading-snug">{selected.item_name}</p>
-                  <p className="text-[9px] text-gray-400">{fmtShort(selected.count_date)}</p>
-                </div>
-                <button onClick={() => startEdit(selected)}
-                  className="shrink-0 text-[9px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded hover:bg-blue-100">
-                  Edit
-                </button>
+            filtered.map(r => (
+              <div key={r.id} id={`count-${r.id}`}
+                className={`border-b border-gray-200 transition ${selectedId === r.id ? 'bg-blue-50/40' : ''}`}>
+                {editingId === r.id ? (
+                  <div className="p-2 space-y-2">
+                    <p className="text-[10px] font-bold text-gray-900 truncate">{r.item_name}</p>
+                    <div>
+                      <p className="text-[9px] text-gray-400 mb-0.5">Qty Counted</p>
+                      <input type="number" min="0" step="any" value={editQty}
+                        onChange={e => setEditQty(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-gray-400 mb-0.5">Notes</p>
+                      <input value={editNotes} onChange={e => setEditNotes(e.target.value)}
+                        placeholder="Optional" className={inputCls} />
+                    </div>
+                    <div className="flex gap-1">
+                      <button onClick={saveEdit} disabled={saving}
+                        className="flex-1 bg-green-600 text-white text-[10px] font-bold rounded py-1 disabled:opacity-40">
+                        {saving ? 'Saving…' : 'Save'}
+                      </button>
+                      <button onClick={() => setEditingId(null)}
+                        className="px-3 py-1 bg-gray-100 text-gray-600 text-[10px] font-semibold rounded">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-2 space-y-2">
+                    <div className="flex items-start justify-between sticky top-0 bg-white z-10">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-bold text-gray-900 leading-snug">{r.item_name}</p>
+                        <p className="text-[9px] text-gray-400">{fmtShort(r.count_date)}</p>
+                      </div>
+                      <button onClick={() => startEdit(r)}
+                        className="shrink-0 text-[9px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded hover:bg-blue-100">
+                        Edit
+                      </button>
+                    </div>
+                    <table className="w-full border-collapse text-[10px]">
+                      <tbody>
+                        <tr className="border-b border-gray-100">
+                          <td className="py-0.5 text-gray-400">Group</td>
+                          <td className="py-0.5 text-right text-gray-700">{r.cf_group ?? '—'}</td>
+                        </tr>
+                        <tr className="border-b border-gray-100">
+                          <td className="py-0.5 text-gray-400">Qty Counted</td>
+                          <td className="py-0.5 text-right font-bold text-gray-900">{Number(r.quantity_counted)}</td>
+                        </tr>
+                        <tr className="border-b border-gray-100">
+                          <td className="py-0.5 text-gray-400">Counted By</td>
+                          <td className="py-0.5 text-right text-blue-500">{r.counted_by ?? '—'}</td>
+                        </tr>
+                        <tr className="border-b border-gray-100">
+                          <td className="py-0.5 text-gray-400">Source</td>
+                          <td className="py-0.5 text-right text-gray-700">{r.source ?? '—'}</td>
+                        </tr>
+                        {r.notes && (
+                          <tr>
+                            <td className="py-0.5 text-gray-400">Notes</td>
+                            <td className="py-0.5 text-right text-gray-700 italic">{r.notes}</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
-              <table className="w-full border-collapse text-[10px]">
-                <tbody>
-                  <tr className="border-b border-gray-100">
-                    <td className="py-0.5 text-gray-400">Group</td>
-                    <td className="py-0.5 text-right text-gray-700">{selected.cf_group ?? '—'}</td>
-                  </tr>
-                  <tr className="border-b border-gray-100">
-                    <td className="py-0.5 text-gray-400">Qty Counted</td>
-                    <td className="py-0.5 text-right font-bold text-gray-900">{Number(selected.quantity_counted)}</td>
-                  </tr>
-                  <tr className="border-b border-gray-100">
-                    <td className="py-0.5 text-gray-400">Counted By</td>
-                    <td className="py-0.5 text-right text-blue-500">{selected.counted_by ?? '—'}</td>
-                  </tr>
-                  <tr className="border-b border-gray-100">
-                    <td className="py-0.5 text-gray-400">Source</td>
-                    <td className="py-0.5 text-right text-gray-700">{selected.source ?? '—'}</td>
-                  </tr>
-                  {selected.notes && (
-                    <tr>
-                      <td className="py-0.5 text-gray-400">Notes</td>
-                      <td className="py-0.5 text-right text-gray-700 italic">{selected.notes}</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            ))
           )}
         </div>
       </div>
