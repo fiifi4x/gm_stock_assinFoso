@@ -12,7 +12,6 @@ const allLinks = [
   { href: '/stock/counts', label: 'Counts', roles: ['owner','manager','staff'] },
   { href: '/transactions', label: 'Day Book', roles: ['owner','manager','staff'] },
   { href: '/expenses', label: 'Expenses', roles: ['owner','manager','staff'] },
-  { href: '/rota', label: 'Rota', roles: ['owner','manager'] },
   { href: '/cash-at-bank', label: 'Cash at Bank', roles: ['owner','manager'] },
   { href: '/staff', label: 'Staff', roles: ['owner','manager','staff'] },
   { href: '/analysis', label: 'Analysis', roles: ['owner','manager','staff'] },
