@@ -13,6 +13,7 @@ type Bill = {
 }
 
 type BillLine = {
+  bill_id: number
   item_name: string
   quantity: string
   unit_price: string
@@ -39,19 +40,29 @@ const inputCls = 'w-full bg-gray-100 border border-gray-200 rounded px-2 py-1 te
 export default function BillsPage() {
   const [bills, setBills] = useState<Bill[]>([])
   const [loading, setLoading] = useState(true)
-  const [selected, setSelected] = useState<Bill | null>(null)
-  const [lines, setLines] = useState<BillLine[]>([])
-  const [linesLoading, setLinesLoading] = useState(false)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [linesMap, setLinesMap] = useState<Record<number, BillLine[]>>({})
   const [search, setSearch] = useState('')
-  const [editing, setEditing] = useState(false)
+  const [editingId, setEditingId] = useState<number | null>(null)
   const [editForm, setEditForm] = useState({ bill_date: '', vendor_name: '', status: 'paid' })
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    fetch('/api/bills')
-      .then(r => r.json())
-      .then(data => { setBills(Array.isArray(data) ? data : []); setLoading(false) })
-      .catch(() => setLoading(false))
+    Promise.all([
+      fetch('/api/bills').then(r => r.json()),
+      fetch('/api/bills/all-lines').then(r => r.json()),
+    ]).then(([billsData, linesData]) => {
+      setBills(Array.isArray(billsData) ? billsData : [])
+      const map: Record<number, BillLine[]> = {}
+      if (Array.isArray(linesData)) {
+        for (const l of linesData) {
+          if (!map[l.bill_id]) map[l.bill_id] = []
+          map[l.bill_id].push(l)
+        }
+      }
+      setLinesMap(map)
+      setLoading(false)
+    }).catch(() => setLoading(false))
   }, [])
 
   const filtered = useMemo(() => {
@@ -64,31 +75,28 @@ export default function BillsPage() {
     )
   }, [bills, search])
 
-  async function selectBill(bill: Bill) {
-    setSelected(bill); setEditing(false); setLines([]); setLinesLoading(true)
-    const res = await fetch(`/api/bills/${bill.id}`)
-    setLines(await res.json())
-    setLinesLoading(false)
+  function jumpTo(bill: Bill) {
+    setSelectedId(bill.id)
+    document.getElementById(`bill-${bill.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   function startEdit(b: Bill) {
     setEditForm({ bill_date: b.bill_date?.slice(0, 10) ?? '', vendor_name: b.vendor_name ?? '', status: b.status ?? 'paid' })
-    setEditing(true)
+    setEditingId(b.id)
   }
 
   async function saveEdit() {
-    if (!selected) return
+    if (editingId == null) return
     setSaving(true)
-    const res = await fetch(`/api/bills/${selected.id}`, {
+    const res = await fetch(`/api/bills/${editingId}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ bill_date: editForm.bill_date || undefined, vendor_name: editForm.vendor_name || null, status: editForm.status }),
     })
     setSaving(false)
     if (res.ok) {
       const updated: Bill = await res.json()
-      setBills(prev => prev.map(b => b.id === selected.id ? { ...b, ...updated } : b))
-      setSelected(s => s ? { ...s, ...updated } : s)
-      setEditing(false)
+      setBills(prev => prev.map(b => b.id === editingId ? { ...b, ...updated } : b))
+      setEditingId(null)
     }
   }
 
@@ -123,8 +131,8 @@ export default function BillsPage() {
             <tbody>
               {filtered.map(b => {
                 return (
-                  <tr key={b.id} onClick={() => selectBill(b)}
-                    className={`cursor-pointer border-b border-gray-100 transition ${selected?.id === b.id ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                  <tr key={b.id} onClick={() => jumpTo(b)}
+                    className={`cursor-pointer border-b border-gray-100 transition ${selectedId === b.id ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
                     <td className="px-0.5 py-0.5 text-gray-700 whitespace-nowrap">{fmtShort(b.bill_date)}</td>
                     <td className="px-0.5 py-0.5 text-gray-700 truncate max-w-[70px]">{b.vendor_name ?? '—'}</td>
                     <td className="px-0.5 py-0.5 text-right text-gray-900 font-semibold">{fmt(b.total)}</td>
@@ -135,88 +143,96 @@ export default function BillsPage() {
           </table>
         </div>
 
-        {/* RIGHT: detail */}
+        {/* RIGHT: every bill's items, stacked continuously */}
         <div className="w-1/2 overflow-y-auto min-h-0 bg-white">
-          {!selected ? (
-            <p className="text-[10px] text-gray-400 text-center py-10">Select a bill</p>
-          ) : editing ? (
-            <div className="p-2 space-y-2">
-              <p className="text-[10px] font-bold text-gray-600">Edit Bill</p>
-              <div>
-                <p className="text-[9px] text-gray-400 mb-0.5">Date</p>
-                <input type="date" value={editForm.bill_date}
-                  onChange={e => setEditForm(f => ({ ...f, bill_date: e.target.value }))} className={inputCls} />
-              </div>
-              <div>
-                <p className="text-[9px] text-gray-400 mb-0.5">Vendor</p>
-                <input value={editForm.vendor_name}
-                  onChange={e => setEditForm(f => ({ ...f, vendor_name: e.target.value }))} className={inputCls} />
-              </div>
-              <div>
-                <p className="text-[9px] text-gray-400 mb-0.5">Status</p>
-                <select value={editForm.status}
-                  onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))} className={inputCls}>
-                  <option value="paid">Paid</option>
-                  <option value="open">Open</option>
-                  <option value="overdue">Overdue</option>
-                </select>
-              </div>
-              <div className="flex gap-1">
-                <button onClick={saveEdit} disabled={saving}
-                  className="flex-1 bg-green-600 text-white text-[10px] font-bold rounded py-1 disabled:opacity-40">
-                  {saving ? 'Saving…' : 'Save'}
-                </button>
-                <button onClick={() => setEditing(false)}
-                  className="px-3 py-1 bg-gray-100 text-gray-600 text-[10px] font-semibold rounded">
-                  Cancel
-                </button>
-              </div>
-            </div>
+          {filtered.length === 0 ? (
+            <p className="text-[10px] text-gray-400 text-center py-10">No bills found</p>
           ) : (
-            <>
-              <div className="flex items-center justify-between px-2 py-1 bg-gray-50 border-b border-gray-200">
-                <div>
-                  <p className="text-[10px] font-bold text-gray-900">{selected.vendor_name ?? 'Unknown'}</p>
-                  <p className="text-[9px] text-gray-400">{fmtShort(selected.bill_date)} · {selected.bill_number}</p>
+            filtered.map(b => {
+              const billLines = linesMap[b.id] ?? []
+              return (
+                <div key={b.id} id={`bill-${b.id}`}
+                  className={`border-b border-gray-200 transition ${selectedId === b.id ? 'bg-blue-50/40' : ''}`}>
+                  {editingId === b.id ? (
+                    <div className="p-2 space-y-2">
+                      <p className="text-[10px] font-bold text-gray-600">Edit Bill</p>
+                      <div>
+                        <p className="text-[9px] text-gray-400 mb-0.5">Date</p>
+                        <input type="date" value={editForm.bill_date}
+                          onChange={e => setEditForm(f => ({ ...f, bill_date: e.target.value }))} className={inputCls} />
+                      </div>
+                      <div>
+                        <p className="text-[9px] text-gray-400 mb-0.5">Vendor</p>
+                        <input value={editForm.vendor_name}
+                          onChange={e => setEditForm(f => ({ ...f, vendor_name: e.target.value }))} className={inputCls} />
+                      </div>
+                      <div>
+                        <p className="text-[9px] text-gray-400 mb-0.5">Status</p>
+                        <select value={editForm.status}
+                          onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))} className={inputCls}>
+                          <option value="paid">Paid</option>
+                          <option value="open">Open</option>
+                          <option value="overdue">Overdue</option>
+                        </select>
+                      </div>
+                      <div className="flex gap-1">
+                        <button onClick={saveEdit} disabled={saving}
+                          className="flex-1 bg-green-600 text-white text-[10px] font-bold rounded py-1 disabled:opacity-40">
+                          {saving ? 'Saving…' : 'Save'}
+                        </button>
+                        <button onClick={() => setEditingId(null)}
+                          className="px-3 py-1 bg-gray-100 text-gray-600 text-[10px] font-semibold rounded">
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between px-2 py-1 bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+                        <div>
+                          <p className="text-[10px] font-bold text-gray-900">{b.vendor_name ?? 'Unknown'}</p>
+                          <p className="text-[9px] text-gray-400">{fmtShort(b.bill_date)} · {b.bill_number}</p>
+                        </div>
+                        <button onClick={() => startEdit(b)}
+                          className="text-[9px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded hover:bg-blue-100">
+                          Edit
+                        </button>
+                      </div>
+                      {billLines.length === 0 ? (
+                        <p className="text-[10px] text-gray-400 text-center py-4">No items.</p>
+                      ) : (
+                        <table className="w-full border-collapse text-[10px]">
+                          <thead>
+                            <tr>
+                              <th className="text-left px-1.5 py-1 font-semibold text-gray-500 border-b border-gray-200">item</th>
+                              <th className="text-right px-1.5 py-1 font-semibold text-gray-500 border-b border-gray-200">qty</th>
+                              <th className="text-right px-1.5 py-1 font-semibold text-gray-500 border-b border-gray-200">price</th>
+                              <th className="text-right px-1.5 py-1 font-semibold text-gray-500 border-b border-gray-200">total</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {billLines.map((l, i) => (
+                              <tr key={i} className="border-b border-gray-100">
+                                <td className="px-1.5 py-0.5 text-gray-900">{l.item_name}</td>
+                                <td className="px-1.5 py-0.5 text-right text-gray-700">{parseFloat(l.quantity)}</td>
+                                <td className="px-1.5 py-0.5 text-right text-gray-700">{fmt(l.unit_price)}</td>
+                                <td className="px-1.5 py-0.5 text-right font-semibold text-gray-900">{fmt(l.item_total)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot>
+                            <tr className="border-t border-gray-200 bg-gray-50">
+                              <td colSpan={3} className="px-1.5 py-1 text-right font-bold text-gray-600">Total</td>
+                              <td className="px-1.5 py-1 text-right font-bold text-gray-900">{fmt(b.total)}</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      )}
+                    </>
+                  )}
                 </div>
-                <button onClick={() => startEdit(selected)}
-                  className="text-[9px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded hover:bg-blue-100">
-                  Edit
-                </button>
-              </div>
-              {linesLoading ? (
-                <p className="text-[10px] text-gray-400 text-center py-6">Loading…</p>
-              ) : lines.length === 0 ? (
-                <p className="text-[10px] text-gray-400 text-center py-6">No items.</p>
-              ) : (
-                <table className="w-full border-collapse text-[10px]">
-                  <thead className="sticky top-0 bg-gray-100 z-10">
-                    <tr>
-                      <th className="text-left px-1.5 py-1 font-semibold text-gray-500 border-b border-gray-200">item</th>
-                      <th className="text-right px-1.5 py-1 font-semibold text-gray-500 border-b border-gray-200">qty</th>
-                      <th className="text-right px-1.5 py-1 font-semibold text-gray-500 border-b border-gray-200">price</th>
-                      <th className="text-right px-1.5 py-1 font-semibold text-gray-500 border-b border-gray-200">total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lines.map((l, i) => (
-                      <tr key={i} className="border-b border-gray-100">
-                        <td className="px-1.5 py-0.5 text-gray-900">{l.item_name}</td>
-                        <td className="px-1.5 py-0.5 text-right text-gray-700">{parseFloat(l.quantity)}</td>
-                        <td className="px-1.5 py-0.5 text-right text-gray-700">{fmt(l.unit_price)}</td>
-                        <td className="px-1.5 py-0.5 text-right font-semibold text-gray-900">{fmt(l.item_total)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="border-t border-gray-200 bg-gray-50">
-                      <td colSpan={3} className="px-1.5 py-1 text-right font-bold text-gray-600">Total</td>
-                      <td className="px-1.5 py-1 text-right font-bold text-gray-900">{fmt(selected.total)}</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              )}
-            </>
+              )
+            })
           )}
         </div>
       </div>
