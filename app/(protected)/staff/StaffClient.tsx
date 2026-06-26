@@ -24,6 +24,14 @@ function nowAs12h(): string {
   return hhmmTo12h(nowAsHHMM())
 }
 
+const SHORT_MON = ['Ja','Fe','Mr','Ap','My','Ju','Jl','Au','Se','Oc','No','De']
+const SHORT_DAY = ['Su','Mo','Tu','We','Th','Fr','Sa']
+function fmtShortDate(raw: string): string {
+  const d = new Date(raw.length === 10 ? raw + 'T00:00:00' : raw)
+  if (isNaN(d.getTime())) return raw
+  return `${d.getDate()} ${SHORT_MON[d.getMonth()]}-${SHORT_DAY[d.getDay()]}`
+}
+
 function to12hToHHMM(t: string | null | undefined): string {
   if (!t) return ''
   const m = t.trim().match(/^(\d{1,2}):(\d{2})(am|pm)$/i)
@@ -256,50 +264,41 @@ function TimesTab({ username }: { username: string }) {
       )}
 
       {/* All records grid */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto">
-        <table className="w-full text-xs min-w-[520px]">
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <table className="w-full text-[11px] table-fixed">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="text-left px-3 py-2 text-gray-500 font-semibold">Date</th>
+              <th className="text-left px-1.5 py-2 text-gray-500 font-semibold w-[22%]">Date</th>
               {STAFF.map(s => (
-                <th key={s} colSpan={2} className="text-center px-2 py-2 text-gray-500 font-semibold capitalize">{s}</th>
-              ))}
-            </tr>
-            <tr className="border-b border-gray-100">
-              <th className="px-3 py-1" />
-              {STAFF.map(s => (
-                <>
-                  <th key={s + 'i'} className="text-center px-1 py-1 text-green-600 font-medium">In</th>
-                  <th key={s + 'o'} className="text-center px-1 py-1 text-orange-500 font-medium">Out</th>
-                </>
+                <th key={s} className="text-center px-0.5 py-2 text-gray-500 font-semibold capitalize">{s}</th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {grouped.map(([date, map]) => (
               <tr key={date} className="hover:bg-gray-50">
-                <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{fmtDate(date)}</td>
+                <td className="px-1.5 py-1.5 text-gray-600 leading-tight">{fmtShortDate(date)}</td>
                 {STAFF.map(s => {
                   const isMine = s === username
                   const cellIn = map[s]?.in ?? <span className="text-gray-200">—</span>
                   const cellOut = map[s]?.out ?? <span className="text-gray-200">—</span>
+                  const content = (
+                    <div className="flex flex-col items-center leading-tight">
+                      <span className="text-green-700">{cellIn}</span>
+                      <span className="text-orange-600">{cellOut}</span>
+                    </div>
+                  )
                   if (isMine) {
                     return (
-                      <td key={s} colSpan={2} className="px-1 py-2">
+                      <td key={s} className="px-0.5 py-1">
                         <button onClick={() => openEdit(date, map)}
-                          className="w-full flex items-center justify-center gap-2 rounded-lg hover:bg-blue-50 py-0.5 transition">
-                          <span className="text-green-700 text-center">{cellIn}</span>
-                          <span className="text-orange-600 text-center">{cellOut}</span>
+                          className="w-full rounded-lg hover:bg-blue-50 py-0.5 transition">
+                          {content}
                         </button>
                       </td>
                     )
                   }
-                  return (
-                    <>
-                      <td key={s + 'i'} className="text-center px-1 py-2 text-green-700">{cellIn}</td>
-                      <td key={s + 'o'} className="text-center px-1 py-2 text-orange-600">{cellOut}</td>
-                    </>
-                  )
+                  return <td key={s} className="px-0.5 py-1 text-center">{content}</td>
                 })}
               </tr>
             ))}
