@@ -8,15 +8,22 @@ export async function GET() {
 
   const rows = await sql`
     SELECT
-      bl.raw_item_name AS name,
-      COUNT(*)::int AS cnt,
-      MAX(bl.resolved_name) AS resolved_name,
-      MAX(bl.item_id)::int AS item_id
-    FROM bill_lines bl
-    WHERE bl.source = 'zoho_historical'
-      AND bl.item_id IS NOT NULL
-    GROUP BY bl.raw_item_name
-    ORDER BY COUNT(*) DESC
+      i.id AS item_id,
+      i.canonical_name,
+      i.cf_group,
+      JSON_AGG(
+        JSON_BUILD_OBJECT('name', bl.raw_item_name, 'cnt', bl.cnt)
+        ORDER BY bl.cnt DESC
+      ) AS raw_names
+    FROM (
+      SELECT item_id, raw_item_name, COUNT(*)::int AS cnt
+      FROM bill_lines
+      WHERE source = 'zoho_historical' AND item_id IS NOT NULL
+      GROUP BY item_id, raw_item_name
+    ) bl
+    JOIN items i ON i.id = bl.item_id
+    GROUP BY i.id, i.canonical_name, i.cf_group
+    ORDER BY i.cf_group NULLS LAST, i.canonical_name
   `
 
   return NextResponse.json(rows)
