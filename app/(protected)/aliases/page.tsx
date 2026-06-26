@@ -380,7 +380,7 @@ function ZohoPanel({ tab, items }: { tab: Tab; items: Item[] }) {
                 <p className="text-[9px] text-gray-400">{selected.raw_names.length} raw name variant{selected.raw_names.length !== 1 ? 's' : ''} from Zoho</p>
               </div>
               <div className="flex-1 overflow-y-auto min-h-0">
-                {selected.raw_names.map(r => {
+                {selected.raw_names.filter(r => !statusMap[r.name]).map(r => {
                   const st = statusMap[r.name]
                   return (
                     <div key={r.name} className={`px-2 py-1.5 border-b border-gray-100 transition ${st === 'ok' ? 'bg-green-50' : st === 'skipped' ? 'bg-gray-50' : ''}`}>
