@@ -10,7 +10,6 @@ const allTabs = [
   { href: '/sales',        label: 'Sales',    roles: ['owner','manager','staff'] },
   { href: '/bills',        label: 'Bills',    roles: ['owner','manager','staff'] },
   { href: '/stock/counts', label: 'Counts',   roles: ['owner','manager','staff'] },
-  { href: '/transactions', label: 'DS',       roles: ['owner','manager','staff'] },
   { href: '/expenses',     label: 'Exp.',     roles: ['owner','manager','staff'] },
   { href: '/item',         label: 'Items',    roles: ['owner','manager','staff'] },
   { href: '/staff',        label: 'Staff',    roles: ['owner','manager','staff'] },

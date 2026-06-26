@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { fmtDate } from '@/lib/fmtDate'
 import { usePolling } from '@/lib/usePolling'
+import DayBookFeed from '@/components/DayBookFeed'
 
 const fmt = (v: any) => `₵${Number(v ?? 0).toLocaleString('en-GH', { maximumFractionDigits: 0 })}`
 
@@ -255,6 +256,10 @@ export default function TodayPage() {
             })}
           </div>
         )}
+      </div>
+
+      <div className="pt-2 border-t border-gray-200">
+        <DayBookFeed />
       </div>
     </div>
   )
