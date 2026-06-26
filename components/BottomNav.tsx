@@ -16,6 +16,7 @@ const allTabs = [
   { href: '/analysis',     label: 'Analysis', roles: ['owner','manager','staff'] },
   { href: '/cash-at-bank', label: 'CAB',      roles: ['owner','manager'] },
   { href: '/logs',         label: 'Logs',     roles: ['owner','manager','staff'] },
+  { href: '/aliases',      label: 'Aliases',  roles: ['owner'] },
   { href: '/users',        label: 'Users',    roles: ['owner'] },
   { href: '/profile',      label: 'Profile',  roles: ['owner','manager','staff'] },
 ]
