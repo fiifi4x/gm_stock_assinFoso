@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET() {
   const rows = await sql`
-    SELECT id, staff_name, violation, details, severity, recorded_by, created_at
+    SELECT id, staff_name, violation, details, severity, COALESCE(points, 0) AS points, recorded_by, created_at
     FROM staff_violations
     ORDER BY created_at DESC
   `
@@ -18,13 +18,13 @@ export async function POST(req: NextRequest) {
   const role = (session.user as any)?.role
   if (!['owner', 'manager'].includes(role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { staff_name, violation, details, severity } = await req.json()
+  const { staff_name, violation, details, severity, points } = await req.json()
   if (!staff_name || !violation) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
 
   const actor = (session.user as any)?.username || session.user?.name || 'Unknown'
   const [row] = await sql`
-    INSERT INTO staff_violations (staff_name, violation, details, severity, recorded_by)
-    VALUES (${staff_name}, ${violation}, ${details ?? null}, ${severity ?? 'minor'}, ${actor})
+    INSERT INTO staff_violations (staff_name, violation, details, severity, points, recorded_by)
+    VALUES (${staff_name}, ${violation}, ${details ?? null}, ${severity ?? 'minor'}, ${points ?? 0}, ${actor})
     RETURNING *
   `
   await logActivity(actor, 'recorded violation', `${staff_name} — ${violation}`)

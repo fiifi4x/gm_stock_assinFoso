@@ -85,7 +85,7 @@ const SEVERITY_COLORS: Record<string, string> = {
   serious: 'bg-red-100 text-red-600',
 }
 
-const TABS = ['Times', 'Payslips', 'Violations', 'Role', 'No Times', 'Rota', 'Analytics'] as const
+const TABS = ['Times', 'Payslips', 'Violations', 'Role', 'No Times', 'Rota', 'Analytics', 'Assignments'] as const
 type Tab = (typeof TABS)[number]
 
 function Badge({ n }: { n: number }) {
@@ -130,7 +130,7 @@ type Payslip = {
 
 type Violation = {
   id: number; staff_name: string; violation: string; details: string | null
-  severity: string; recorded_by: string | null; created_at: string
+  severity: string; points: number; recorded_by: string | null; created_at: string
 }
 
 type AppUser = { id: number; username: string; display_name: string; email: string | null; role: string }
@@ -536,7 +536,7 @@ function ViolationsTab({ role }: { role: string }) {
   const [violations, setViolations] = useState<Violation[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ staff_name: STAFF[0], violation: '', details: '', severity: 'minor' })
+  const [form, setForm] = useState({ staff_name: STAFF[0], violation: '', details: '', severity: 'minor', points: '5' })
   const [saving, setSaving] = useState(false)
   const [staffFilter, setStaffFilter] = useState('All')
 
@@ -551,13 +551,13 @@ function ViolationsTab({ role }: { role: string }) {
     setSaving(true)
     const res = await fetch('/api/staff/violations', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, points: Number(form.points) || 0 }),
     })
     setSaving(false)
     if (res.ok) {
       const row = await res.json()
       setViolations(prev => [row, ...prev])
-      setForm({ staff_name: STAFF[0], violation: '', details: '', severity: 'minor' })
+      setForm({ staff_name: STAFF[0], violation: '', details: '', severity: 'minor', points: '5' })
       setShowForm(false)
     }
   }
@@ -573,10 +573,28 @@ function ViolationsTab({ role }: { role: string }) {
   const canManage = ['owner', 'manager'].includes(role)
   const filtered = staffFilter === 'All' ? violations : violations.filter(v => v.staff_name.toLowerCase() === staffFilter.toLowerCase())
 
+  const leaderboard = useMemo(() => {
+    const totals: Record<string, number> = {}
+    for (const v of violations) totals[v.staff_name] = (totals[v.staff_name] ?? 0) + (v.points || 0)
+    return STAFF.map(s => ({ staff: s, points: totals[s] ?? 0 })).sort((a, b) => b.points - a.points)
+  }, [violations])
+
   if (loading) return <div className="py-10 text-center text-gray-400">Loading…</div>
 
   return (
     <div className="space-y-4">
+      <div className="bg-white border border-gray-200 rounded-xl p-3">
+        <p className="text-xs font-semibold text-gray-500 mb-2">Penalty Points Leaderboard</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {leaderboard.map(l => (
+            <div key={l.staff} className="bg-gray-50 rounded-lg px-3 py-2">
+              <p className="text-[10px] text-gray-400 capitalize">{l.staff}</p>
+              <p className={`text-base font-bold ${l.points > 0 ? 'text-red-500' : 'text-gray-700'}`}>{l.points}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="flex items-center justify-between">
         <div className="flex gap-1.5 overflow-x-auto pb-1">
           {['All', ...STAFF].map(s => (
@@ -613,6 +631,11 @@ function ViolationsTab({ role }: { role: string }) {
                 <option value="serious">Serious</option>
               </select>
             </div>
+            <div>
+              <label className={labelCls}>Points</label>
+              <input type="number" min="0" value={form.points}
+                onChange={e => setForm(f => ({ ...f, points: e.target.value }))} className={inputCls} />
+            </div>
           </div>
           <div>
             <label className={labelCls}>Violation</label>
@@ -647,6 +670,11 @@ function ViolationsTab({ role }: { role: string }) {
                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${SEVERITY_COLORS[v.severity] ?? 'bg-gray-100 text-gray-500'}`}>
                   {v.severity}
                 </span>
+                {v.points > 0 && (
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-600">
+                    -{v.points} pts
+                  </span>
+                )}
               </div>
               {role === 'owner' && (
                 <button onClick={() => remove(v.id)} className="text-xs text-red-400 hover:text-red-600 font-semibold shrink-0">Delete</button>
@@ -1399,6 +1427,110 @@ function AnalyticsTab() {
   )
 }
 
+// ── ASSIGNMENTS TAB ──────────────────────────────────────────────────────────
+
+const VIOLATION_TYPES: { type: string; label: string; auto: boolean }[] = [
+  { type: 'missing_days', label: 'Sales Receipts not entered', auto: true },
+  { type: 'no_cash', label: 'Walk-in receipts missing cash counted', auto: true },
+  { type: 'cost_gte_sell', label: 'Cost Price ≥ Selling Price', auto: true },
+  { type: 'no_staff_times', label: 'Days with no staff times recorded', auto: true },
+  { type: 'unchecked_cab', label: 'Weeks with no Cash at Bank confirmation', auto: true },
+  { type: 'no_group', label: 'Items with no group assigned', auto: false },
+  { type: 'duplicates', label: 'Possible duplicate item pairs', auto: false },
+  { type: 'not_in_inventory', label: 'Item names not found in inventory', auto: false },
+]
+
+function AssignmentsTab({ role }: { role: string }) {
+  const [assignments, setAssignments] = useState<Record<string, string>>({})
+  const [settings, setSettings] = useState<Record<string, string>>({})
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState<string | null>(null)
+  const canManage = role === 'owner'
+
+  function load() {
+    fetch('/api/violations/assignments')
+      .then(r => r.json())
+      .then(d => { setAssignments(d.assignments ?? {}); setSettings(d.settings ?? {}); setLoading(false) })
+      .catch(() => setLoading(false))
+  }
+
+  useEffect(() => { load() }, [])
+
+  async function assign(type: string, staff: string) {
+    setSaving(type)
+    await fetch('/api/violations/assignments', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ violation_type: type, staff_name: staff || null }),
+    })
+    setAssignments(prev => ({ ...prev, [type]: staff }))
+    setSaving(null)
+  }
+
+  async function saveSettings() {
+    setSaving('__settings__')
+    await fetch('/api/violations/assignments', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ settings }),
+    })
+    setSaving(null)
+  }
+
+  if (loading) return <div className="py-10 text-center text-gray-400">Loading…</div>
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+        <p className="text-sm font-semibold text-gray-700">Auto-Penalty Settings</p>
+        <p className="text-[11px] text-gray-400">
+          Once an assigned violation has been outstanding this many days, the assigned staff member is
+          automatically penalized the points below. Checked daily.
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className={labelCls}>Threshold (days)</label>
+            <input type="number" min="1" disabled={!canManage}
+              value={settings.threshold_days ?? '3'}
+              onChange={e => setSettings(s => ({ ...s, threshold_days: e.target.value }))}
+              className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>Points per violation</label>
+            <input type="number" min="1" disabled={!canManage}
+              value={settings.points_per_violation ?? '5'}
+              onChange={e => setSettings(s => ({ ...s, points_per_violation: e.target.value }))}
+              className={inputCls} />
+          </div>
+        </div>
+        {canManage && (
+          <button onClick={saveSettings} disabled={saving === '__settings__'}
+            className="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl px-4 py-2 transition">
+            {saving === '__settings__' ? 'Saving…' : 'Save Settings'}
+          </button>
+        )}
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100">
+        {VIOLATION_TYPES.map(v => (
+          <div key={v.type} className="flex items-center justify-between gap-3 px-4 py-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm text-gray-800">{v.label}</p>
+              {!v.auto && <p className="text-[10px] text-gray-400">No auto-penalty — no fixed date to measure against.</p>}
+            </div>
+            <select value={assignments[v.type] ?? ''} disabled={!canManage || saving === v.type}
+              onChange={e => assign(v.type, e.target.value)}
+              className="shrink-0 bg-gray-100 border border-gray-200 rounded-lg px-2 py-1.5 text-sm capitalize outline-none focus:ring-1 focus:ring-blue-400 disabled:opacity-60">
+              <option value="">Unassigned</option>
+              {STAFF.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+            </select>
+          </div>
+        ))}
+      </div>
+
+      {!canManage && <p className="text-[11px] text-gray-400 text-center">Only the owner can change assignments.</p>}
+    </div>
+  )
+}
+
 // ── MAIN ──────────────────────────────────────────────────────────────────────
 
 function StaffClientInner({ role, username }: { role: string; username: string }) {
@@ -1427,6 +1559,7 @@ function StaffClientInner({ role, username }: { role: string; username: string }
       {tab === 'No Times' && <NoTimesTab />}
       {tab === 'Rota' && <RotaTab />}
       {tab === 'Analytics' && <AnalyticsTab />}
+      {tab === 'Assignments' && <AssignmentsTab role={role} />}
     </div>
   )
 }

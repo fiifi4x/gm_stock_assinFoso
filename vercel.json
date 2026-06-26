@@ -1,0 +1,5 @@
+{
+  "crons": [
+    { "path": "/api/violations/auto-check", "schedule": "0 6 * * *" }
+  ]
+}
