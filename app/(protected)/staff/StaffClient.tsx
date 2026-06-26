@@ -2,6 +2,9 @@
 import { useState, useEffect, useMemo, Fragment } from 'react'
 import { fmtDate } from '@/lib/fmtDate'
 import { usePolling } from '@/lib/usePolling'
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell,
+} from 'recharts'
 
 const STAFF = ['joe', 'bino', 'james', 'rawlings']
 
@@ -39,6 +42,20 @@ function monthKeyLabel(monthKey: string): string {
   return `${FULL_MON[m - 1]} ${y}`
 }
 
+function monthKeyShort(monthKey: string): string {
+  const [y, m] = monthKey.split('-').map(Number)
+  return `${SHORT_MON[m - 1]} ${String(y).slice(-2)}`
+}
+
+function monthsBetween(from: string, to: string): number {
+  const a = new Date(from + 'T00:00:00'), b = new Date(to + 'T00:00:00')
+  return Math.max(0, (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth()))
+}
+
+const STAFF_CHART_COLORS: Record<string, string> = {
+  joe: '#3b82f6', bino: '#a855f7', james: '#22c55e', rawlings: '#f97316',
+}
+
 function to12hToHHMM(t: string | null | undefined): string {
   if (!t) return ''
   const m = t.trim().match(/^(\d{1,2}):(\d{2})(am|pm)$/i)
@@ -67,7 +84,7 @@ const SEVERITY_COLORS: Record<string, string> = {
   serious: 'bg-red-100 text-red-600',
 }
 
-const TABS = ['Times', 'Payslips', 'Violations', 'Role', 'No Times', 'Rota'] as const
+const TABS = ['Times', 'Payslips', 'Violations', 'Role', 'No Times', 'Rota', 'Analytics'] as const
 type Tab = (typeof TABS)[number]
 
 function Badge({ n }: { n: number }) {
@@ -1156,6 +1173,231 @@ function RotaTab() {
   )
 }
 
+// ── ANALYTICS TAB ────────────────────────────────────────────────────────────
+
+function AnalyticsTab() {
+  const [recent, setRecent] = useState<RecentRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [activeStaff, setActiveStaff] = useState<string[]>(STAFF)
+
+  useEffect(() => {
+    fetch('/api/staff-times/today')
+      .then(r => r.json())
+      .then(d => {
+        const rows = Array.isArray(d.recent) ? d.recent : []
+        setRecent(rows.filter((r: RecentRow) => r.staff_name !== '__shop_open__'))
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [])
+
+  function toggleStaff(s: string) {
+    setActiveStaff(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
+  }
+
+  const filtered = useMemo(() => recent.filter(r => activeStaff.includes(r.staff_name)), [recent, activeStaff])
+
+  function durationMins(r: RecentRow): number | null {
+    if (!r.actual_in || !r.actual_out) return null
+    const i = parseTimeMins(r.actual_in), o = parseTimeMins(r.actual_out)
+    if (i == null || o == null) return null
+    return o >= i ? o - i : (o + 1440) - i
+  }
+
+  // Monthly hours per staff
+  const monthlyData = useMemo(() => {
+    const map: Record<string, Record<string, number>> = {}
+    for (const r of filtered) {
+      const mins = durationMins(r)
+      if (mins == null) continue
+      const monthKey = r.work_date.slice(0, 7)
+      if (!map[monthKey]) map[monthKey] = {}
+      map[monthKey][r.staff_name] = (map[monthKey][r.staff_name] ?? 0) + mins / 60
+    }
+    return Object.entries(map)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, vals]) => ({
+        month: monthKeyShort(month),
+        ...Object.fromEntries(STAFF.map(s => [s, Math.round((vals[s] ?? 0) * 10) / 10])),
+      }))
+  }, [filtered])
+
+  // All-time leaderboard
+  const leaderboard = useMemo(() => {
+    const totals: Record<string, number> = {}
+    for (const r of filtered) {
+      const mins = durationMins(r)
+      if (mins == null) continue
+      totals[r.staff_name] = (totals[r.staff_name] ?? 0) + mins
+    }
+    return STAFF.filter(s => activeStaff.includes(s))
+      .map(s => ({ staff: s, hours: Math.round((totals[s] ?? 0) / 6) / 10 }))
+      .sort((a, b) => b.hours - a.hours)
+  }, [filtered, activeStaff])
+
+  // Tenure: first recorded date per staff (proxy -- app doesn't track hire dates)
+  const tenure = useMemo(() => {
+    const first: Record<string, string> = {}
+    for (const r of recent) {
+      if (!activeStaff.includes(r.staff_name)) continue
+      if (!first[r.staff_name] || r.work_date < first[r.staff_name]) first[r.staff_name] = r.work_date
+    }
+    const today = new Date().toISOString().slice(0, 10)
+    return STAFF.filter(s => activeStaff.includes(s)).map(s => {
+      const since = first[s]
+      return { staff: s, since, months: since ? monthsBetween(since, today) : 0 }
+    }).sort((a, b) => b.months - a.months)
+  }, [recent, activeStaff])
+
+  // Punctuality: average clock-in time
+  const punctuality = useMemo(() => {
+    const sums: Record<string, { total: number; count: number }> = {}
+    for (const r of filtered) {
+      const i = parseTimeMins(r.actual_in)
+      if (i == null) continue
+      if (!sums[r.staff_name]) sums[r.staff_name] = { total: 0, count: 0 }
+      sums[r.staff_name].total += i
+      sums[r.staff_name].count++
+    }
+    return STAFF.filter(s => activeStaff.includes(s)).map(s => {
+      const v = sums[s]
+      return { staff: s, avgMins: v ? Math.round(v.total / v.count) : null }
+    }).sort((a, b) => (a.avgMins ?? 9999) - (b.avgMins ?? 9999))
+  }, [filtered, activeStaff])
+
+  // Day-of-week pattern (avg hours, combined across active staff)
+  const dowData = useMemo(() => {
+    const sums = Array(7).fill(0), counts = Array(7).fill(0)
+    for (const r of filtered) {
+      const mins = durationMins(r)
+      if (mins == null) continue
+      const dow = new Date(r.work_date + 'T00:00:00').getDay()
+      sums[dow] += mins; counts[dow]++
+    }
+    const labels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+    return labels.map((l, i) => ({ day: l, avgHours: counts[i] ? Math.round((sums[i] / counts[i] / 60) * 10) / 10 : 0 }))
+  }, [filtered])
+
+  // Busiest month highlight
+  const busiestMonth = useMemo(() => {
+    if (!monthlyData.length) return null
+    let best = monthlyData[0], bestTotal = -1
+    for (const row of monthlyData as any[]) {
+      const total = STAFF.reduce((s, st) => s + (row[st] ?? 0), 0)
+      if (total > bestTotal) { bestTotal = total; best = row }
+    }
+    return { month: (best as any).month, total: Math.round(bestTotal * 10) / 10 }
+  }, [monthlyData])
+
+  if (loading) return <div className="py-10 text-center text-gray-400">Loading…</div>
+
+  return (
+    <div className="space-y-5">
+      {/* Staff filter chips */}
+      <div className="flex gap-1.5 flex-wrap">
+        {STAFF.map(s => (
+          <button key={s} onClick={() => toggleStaff(s)}
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold capitalize transition
+              ${activeStaff.includes(s) ? 'text-white' : 'bg-gray-100 text-gray-400'}`}
+            style={activeStaff.includes(s) ? { backgroundColor: STAFF_CHART_COLORS[s] } : {}}>
+            {s}
+          </button>
+        ))}
+      </div>
+
+      {recent.length === 0 ? (
+        <p className="py-10 text-center text-gray-400 text-sm">No staff time data yet.</p>
+      ) : (
+        <>
+          {/* Busiest month highlight */}
+          {busiestMonth && (
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+              <p className="text-xs text-blue-600 font-medium">Busiest month</p>
+              <p className="text-lg font-bold text-gray-900">{busiestMonth.month} — {busiestMonth.total}h total</p>
+            </div>
+          )}
+
+          {/* Monthly hours comparison */}
+          <div className="bg-white border border-gray-200 rounded-xl p-3">
+            <p className="text-sm font-semibold text-gray-700 mb-2">Monthly Hours — Staff Comparison</p>
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={monthlyData} margin={{ left: -20 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip wrapperStyle={{ fontSize: 12 }} />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                {STAFF.filter(s => activeStaff.includes(s)).map(s => (
+                  <Bar key={s} dataKey={s} fill={STAFF_CHART_COLORS[s]} radius={[3, 3, 0, 0]} />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* All-time leaderboard */}
+          <div className="bg-white border border-gray-200 rounded-xl p-3">
+            <p className="text-sm font-semibold text-gray-700 mb-2">All-Time Total Hours</p>
+            <ResponsiveContainer width="100%" height={Math.max(120, leaderboard.length * 44)}>
+              <BarChart data={leaderboard} layout="vertical" margin={{ left: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 11 }} />
+                <YAxis dataKey="staff" type="category" tick={{ fontSize: 12 }} width={70} className="capitalize" />
+                <Tooltip wrapperStyle={{ fontSize: 12 }} formatter={(v: any) => [`${v}h`, 'Total']} />
+                <Bar dataKey="hours" radius={[0, 4, 4, 0]}>
+                  {leaderboard.map(row => <Cell key={row.staff} fill={STAFF_CHART_COLORS[row.staff]} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Tenure */}
+          <div className="bg-white border border-gray-200 rounded-xl p-3">
+            <p className="text-sm font-semibold text-gray-700 mb-0.5">Tenure (Active Since)</p>
+            <p className="text-[11px] text-gray-400 mb-2">Based on earliest recorded clock-in — not necessarily actual hire date.</p>
+            <div className="space-y-2">
+              {tenure.map(t => (
+                <div key={t.staff} className="flex items-center justify-between text-sm">
+                  <span className="font-semibold capitalize" style={{ color: STAFF_CHART_COLORS[t.staff] }}>{t.staff}</span>
+                  <span className="text-gray-600">{t.since ? fmtDate(t.since) : '—'}</span>
+                  <span className="text-gray-400 text-xs">{t.months} mo{t.months !== 1 ? 's' : ''}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Punctuality */}
+          <div className="bg-white border border-gray-200 rounded-xl p-3">
+            <p className="text-sm font-semibold text-gray-700 mb-0.5">Punctuality — Average Clock-In Time</p>
+            <p className="text-[11px] text-gray-400 mb-2">Lower (earlier) is better. Based on all recorded clock-ins.</p>
+            <div className="space-y-2">
+              {punctuality.map(p => (
+                <div key={p.staff} className="flex items-center justify-between text-sm">
+                  <span className="font-semibold capitalize" style={{ color: STAFF_CHART_COLORS[p.staff] }}>{p.staff}</span>
+                  <span className="text-gray-700 font-medium">{p.avgMins != null ? minsTo12h(p.avgMins) : '—'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Day-of-week pattern */}
+          <div className="bg-white border border-gray-200 rounded-xl p-3">
+            <p className="text-sm font-semibold text-gray-700 mb-2">Average Hours by Day of Week</p>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={dowData} margin={{ left: -20 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="day" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip wrapperStyle={{ fontSize: 12 }} formatter={(v: any) => [`${v}h`, 'Avg']} />
+                <Bar dataKey="avgHours" fill="#6366f1" radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 // ── MAIN ──────────────────────────────────────────────────────────────────────
 
 export default function StaffClient({ role, username }: { role: string; username: string }) {
@@ -1181,6 +1423,7 @@ export default function StaffClient({ role, username }: { role: string; username
       {tab === 'Role' && <RoleTab role={role} />}
       {tab === 'No Times' && <NoTimesTab />}
       {tab === 'Rota' && <RotaTab />}
+      {tab === 'Analytics' && <AnalyticsTab />}
     </div>
   )
 }
