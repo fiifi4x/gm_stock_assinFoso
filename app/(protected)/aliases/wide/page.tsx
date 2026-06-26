@@ -13,7 +13,7 @@ export default function AliasEditorPage() {
 
   // Add alias
   const [newAlias, setNewAlias] = useState('')
-  const [newType, setNewType] = useState('manual')
+  const [newType, setNewType] = useState('sr_variant')
   const [adding, setAdding] = useState(false)
   const [addError, setAddError] = useState('')
 
@@ -25,6 +25,12 @@ export default function AliasEditorPage() {
   const [moveSearch, setMoveSearch] = useState('')
   const [moving, setMoving] = useState(false)
 
+  // Merge canonical items
+  const [mergeMode, setMergeMode] = useState(false)
+  const [mergeSearch, setMergeSearch] = useState('')
+  const [merging, setMerging] = useState(false)
+  const [mergeResult, setMergeResult] = useState<string | null>(null)
+
   useEffect(() => { load() }, [])
 
   async function load() {
@@ -32,7 +38,6 @@ export default function AliasEditorPage() {
     const d = await fetch('/api/aliases/wide').then(r => r.json())
     const updated = Array.isArray(d) ? d : []
     setRows(updated)
-    // keep selected in sync
     setSelected(prev => prev ? (updated.find((r: Row) => r.item_id === prev.item_id) ?? null) : null)
     setLoading(false)
   }
@@ -62,8 +67,20 @@ export default function AliasEditorPage() {
       .slice(0, 40)
   }, [rows, moveSearch, selected])
 
+  const mergeTargets = useMemo(() => {
+    const q = mergeSearch.toLowerCase()
+    if (!q) return rows.filter(r => r.item_id !== selected?.item_id).slice(0, 40)
+    return rows
+      .filter(r => r.item_id !== selected?.item_id &&
+        (r.canonical_name.toLowerCase().includes(q) || (r.cf_group ?? '').toLowerCase().includes(q)))
+      .slice(0, 40)
+  }, [rows, mergeSearch, selected])
+
   function selectRow(r: Row) {
-    setSelected(r); setNewAlias(''); setAddError(''); setMovingAlias(null); setMoveSearch('')
+    setSelected(r)
+    setNewAlias(''); setAddError('')
+    setMovingAlias(null); setMoveSearch('')
+    setMergeMode(false); setMergeSearch(''); setMergeResult(null)
   }
 
   async function addAlias() {
@@ -95,9 +112,25 @@ export default function AliasEditorPage() {
       body: JSON.stringify({ item_id: targetItemId }),
     })
     setMoving(false)
-    setMovingAlias(null)
-    setMoveSearch('')
+    setMovingAlias(null); setMoveSearch('')
     await load()
+  }
+
+  async function mergeInto(winnerId: number, winnerName: string) {
+    if (!selected) return
+    setMerging(true)
+    const res = await fetch('/api/items/merge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ loser_id: selected.item_id, winner_id: winnerId }),
+    })
+    setMerging(false)
+    if (res.ok) {
+      setMergeResult(`"${selected.canonical_name}" merged into "${winnerName}"`)
+      setMergeMode(false); setMergeSearch('')
+      setSelected(null)
+      await load()
+    }
   }
 
   if (loading) return <div className="py-20 text-center text-gray-400 text-xs">Loading…</div>
@@ -123,6 +156,14 @@ export default function AliasEditorPage() {
           ))}
         </div>
       </div>
+
+      {/* Merge result toast */}
+      {mergeResult && (
+        <div className="shrink-0 px-3 py-1.5 bg-green-50 border-b border-green-200 flex items-center justify-between">
+          <p className="text-[9px] text-green-700 font-semibold">✓ {mergeResult}</p>
+          <button onClick={() => setMergeResult(null)} className="text-green-400 text-xs font-bold">×</button>
+        </div>
+      )}
 
       <div className="flex flex-1 min-h-0">
 
@@ -150,12 +191,13 @@ export default function AliasEditorPage() {
           </table>
         </div>
 
-        {/* RIGHT: alias editor */}
+        {/* RIGHT */}
         <div className="w-1/2 overflow-y-auto min-h-0 bg-white flex flex-col">
           {!selected ? (
             <p className="text-[10px] text-gray-400 text-center py-10">Select an item to edit its aliases</p>
           ) : movingAlias ? (
-            /* ── MOVE MODE ── */
+
+            /* ── MOVE ALIAS MODE ── */
             <div className="flex flex-col h-full">
               <div className="px-2 py-1.5 bg-orange-50 border-b border-orange-200 shrink-0">
                 <p className="text-[9px] text-orange-500 font-semibold uppercase">Moving alias</p>
@@ -169,8 +211,7 @@ export default function AliasEditorPage() {
               </div>
               <div className="flex-1 overflow-y-auto min-h-0">
                 {moveTargets.map(r => (
-                  <div key={r.item_id}
-                    onClick={() => !moving && moveAlias(r.item_id)}
+                  <div key={r.item_id} onClick={() => !moving && moveAlias(r.item_id)}
                     className="px-2 py-1.5 border-b border-gray-100 cursor-pointer hover:bg-orange-50 transition">
                     <p className="text-[10px] font-semibold text-gray-900">{r.canonical_name}</p>
                     {r.cf_group && <p className="text-[9px] text-gray-400">{r.cf_group}</p>}
@@ -184,13 +225,55 @@ export default function AliasEditorPage() {
                 </button>
               </div>
             </div>
+
+          ) : mergeMode ? (
+
+            /* ── MERGE CANONICAL MODE ── */
+            <div className="flex flex-col h-full">
+              <div className="px-2 py-1.5 bg-red-50 border-b border-red-200 shrink-0">
+                <p className="text-[9px] text-red-500 font-semibold uppercase">Merging item</p>
+                <p className="text-[10px] font-bold text-gray-900 break-words">{selected.canonical_name}</p>
+                <p className="text-[9px] text-gray-400 mt-0.5">
+                  This item will become an alias of whichever you pick. All its sales/bill lines and existing aliases will move to the winner. It will be marked Inactive.
+                </p>
+              </div>
+              <div className="px-2 py-1.5 border-b border-gray-100 shrink-0">
+                <input value={mergeSearch} onChange={e => setMergeSearch(e.target.value)}
+                  placeholder="Search for the correct canonical item…" autoFocus
+                  className="w-full text-[10px] bg-gray-50 border border-gray-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-red-400 text-gray-900" />
+              </div>
+              <div className="flex-1 overflow-y-auto min-h-0">
+                {mergeTargets.map(r => (
+                  <div key={r.item_id}
+                    onClick={() => !merging && mergeInto(r.item_id, r.canonical_name)}
+                    className="px-2 py-1.5 border-b border-gray-100 cursor-pointer hover:bg-red-50 transition">
+                    <p className="text-[10px] font-semibold text-gray-900">{r.canonical_name}</p>
+                    {r.cf_group && <p className="text-[9px] text-gray-400">{r.cf_group}</p>}
+                    <p className="text-[9px] text-gray-300">{r.aliases.length} aliases</p>
+                  </div>
+                ))}
+              </div>
+              <div className="px-2 py-1.5 border-t border-gray-200 shrink-0">
+                <button onClick={() => { setMergeMode(false); setMergeSearch('') }}
+                  className="w-full text-[10px] font-semibold text-gray-600 bg-gray-100 rounded py-1 hover:bg-gray-200 transition">
+                  Cancel
+                </button>
+              </div>
+            </div>
+
           ) : (
+
             /* ── NORMAL MODE ── */
             <>
               {/* Header */}
               <div className="px-2 py-1.5 bg-gray-50 border-b border-gray-200 shrink-0">
                 <p className="text-[11px] font-bold text-gray-900">{selected.canonical_name}</p>
                 <p className="text-[9px] text-gray-400">{selected.cf_group ?? 'No group'} · {selected.aliases.length} alias{selected.aliases.length !== 1 ? 'es' : ''}</p>
+                {/* Merge button */}
+                <button onClick={() => { setMergeMode(true); setMergeSearch('') }}
+                  className="mt-1 text-[9px] font-semibold text-red-500 bg-red-50 px-2 py-0.5 rounded hover:bg-red-100 transition">
+                  Merge into another item →
+                </button>
               </div>
 
               {/* Add alias */}
@@ -203,7 +286,7 @@ export default function AliasEditorPage() {
                 <div className="flex gap-1">
                   <select value={newType} onChange={e => setNewType(e.target.value)}
                     className="text-[9px] bg-gray-50 border border-gray-200 rounded px-1 py-0.5 outline-none text-gray-600">
-                    <option value="manual">manual</option>
+                    <option value="sr_variant">sr_variant</option>
                     <option value="canonical">canonical</option>
                     <option value="wic_service">wic_service</option>
                     <option value="gmc_service">gmc_service</option>
@@ -236,14 +319,11 @@ export default function AliasEditorPage() {
                           <td className="px-1.5 py-0.5 text-gray-900 break-words">{a.name}</td>
                           <td className="px-1.5 py-0.5 text-gray-400 whitespace-nowrap">{a.type}</td>
                           <td className="px-1.5 py-0.5 text-right whitespace-nowrap">
-                            {/* Move */}
                             <button onClick={() => { setMovingAlias(a); setMoveSearch('') }}
                               className="text-[9px] text-orange-500 font-semibold hover:text-orange-600 mr-2 transition">
                               Move
                             </button>
-                            {/* Delete */}
-                            <button onClick={() => deleteAlias(a.id)}
-                              disabled={deletingId === a.id}
+                            <button onClick={() => deleteAlias(a.id)} disabled={deletingId === a.id}
                               className="text-gray-300 hover:text-red-500 font-bold text-xs transition disabled:opacity-40">
                               {deletingId === a.id ? '…' : '×'}
                             </button>
