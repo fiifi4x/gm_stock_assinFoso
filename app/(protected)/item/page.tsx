@@ -7,8 +7,10 @@ import SalesTab from './_components/SalesTab'
 import BillsTab from './_components/BillsTab'
 import CountsTab from './_components/CountsTab'
 import AliasesTab from './_components/AliasesTab'
+import ExpensesTab from './_components/ExpensesTab'
+import CABTab from './_components/CABTab'
 
-type OuterTab = 'items' | 'sales' | 'bills' | 'counts' | 'aliases'
+type OuterTab = 'items' | 'sales' | 'bills' | 'counts' | 'aliases' | 'expenses' | 'cab'
 
 type Item = {
   id: number
@@ -45,6 +47,8 @@ const VIOLATIONS: Record<OuterTab, { key: string; label: string }[]> = {
     { key: 'zoho-sales',    label: 'Zoho Sales' },
     { key: 'zoho-bills',    label: 'Zoho Bills' },
   ],
+  expenses: [],
+  cab: [],
 }
 
 function tabCls(active: boolean) {
@@ -122,6 +126,16 @@ function HubInner() {
 
           <button onClick={() => changeTab('counts')} className={tabCls(outerTab === 'counts')}>Counts</button>
           <button onClick={() => changeTab('aliases')} className={tabCls(outerTab === 'aliases')}>Aliases</button>
+
+          <div className="w-px h-3.5 bg-gray-200 mx-0.5 shrink-0" />
+
+          <div className="flex items-center shrink-0">
+            <button onClick={() => changeTab('expenses')} className={tabCls(outerTab === 'expenses')}>Exp.</button>
+            <Link href="/expenses/new"
+              className="text-[9px] text-blue-500 font-bold px-0.5 py-0.5 hover:text-blue-700 leading-none">+</Link>
+          </div>
+
+          <button onClick={() => changeTab('cab')} className={tabCls(outerTab === 'cab')}>CAB</button>
         </div>
 
         {/* Row 2: groups dropdown + violations + search */}
@@ -209,6 +223,12 @@ function HubInner() {
         )}
         {outerTab === 'aliases' && (
           <AliasesTab defaultTab={violation} />
+        )}
+        {outerTab === 'expenses' && (
+          <ExpensesTab search={search} />
+        )}
+        {outerTab === 'cab' && (
+          <CABTab />
         )}
       </div>
     </div>
