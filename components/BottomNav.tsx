@@ -7,16 +7,13 @@ type Props = { role: string }
 
 const allTabs = [
   { href: '/today',        label: 'Today',    roles: ['owner','manager','staff'] },
-  { href: '/sales',        label: 'Sales',    roles: ['owner','manager','staff'] },
-  { href: '/bills',        label: 'Bills',    roles: ['owner','manager','staff'] },
-  { href: '/stock/counts', label: 'Counts',   roles: ['owner','manager','staff'] },
+  { href: '/transactions', label: 'DS',       roles: ['owner','manager','staff'] },
   { href: '/expenses',     label: 'Exp.',     roles: ['owner','manager','staff'] },
   { href: '/item',         label: 'Items',    roles: ['owner','manager','staff'] },
   { href: '/staff',        label: 'Staff',    roles: ['owner','manager','staff'] },
   { href: '/analysis',     label: 'Analysis', roles: ['owner','manager','staff'] },
   { href: '/cash-at-bank', label: 'CAB',      roles: ['owner','manager'] },
   { href: '/logs',         label: 'Logs',     roles: ['owner','manager','staff'] },
-  { href: '/aliases',      label: 'Aliases',  roles: ['owner'] },
   { href: '/users',        label: 'Users',    roles: ['owner'] },
   { href: '/profile',      label: 'Profile',  roles: ['owner','manager','staff'] },
 ]
@@ -24,7 +21,11 @@ const allTabs = [
 export default function BottomNav({ role }: Props) {
   const pathname = usePathname()
   const tabs = allTabs.filter(t => t.roles.includes(role))
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
+  const HUB_ROUTES = ['/sales', '/bills', '/stock/counts', '/aliases']
+  const isActive = (href: string) => {
+    if (href === '/item') return pathname === '/item' || pathname.startsWith('/item/') || HUB_ROUTES.some(r => pathname === r || pathname.startsWith(r + '/'))
+    return pathname === href || pathname.startsWith(href + '/')
+  }
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50"
