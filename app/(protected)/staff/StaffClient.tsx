@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, Fragment } from 'react'
 import { fmtDate } from '@/lib/fmtDate'
 import { usePolling } from '@/lib/usePolling'
 
@@ -30,6 +30,12 @@ function fmtShortDate(raw: string): string {
   const d = new Date(raw.length === 10 ? raw + 'T00:00:00' : raw)
   if (isNaN(d.getTime())) return raw
   return `${d.getDate()} ${SHORT_MON[d.getMonth()]}-${SHORT_DAY[d.getDay()]}`
+}
+
+const FULL_MON = ['January','February','March','April','May','June','July','August','September','October','November','December']
+function monthKeyLabel(monthKey: string): string {
+  const [y, m] = monthKey.split('-').map(Number)
+  return `${FULL_MON[m - 1]} ${y}`
 }
 
 function to12hToHHMM(t: string | null | undefined): string {
@@ -173,6 +179,15 @@ function TimesTab({ username }: { username: string }) {
 
   const grouped = groupByDate(recent)
 
+  function monthMinutesFor(staffName: string, monthKey: string): number {
+    const rows = recent.filter(r => r.staff_name === staffName && r.work_date.startsWith(monthKey) && r.actual_in && r.actual_out)
+    return rows.reduce((sum, r) => {
+      const i = parseTimeMins(r.actual_in), o = parseTimeMins(r.actual_out)
+      if (i == null || o == null) return sum
+      return sum + (o >= i ? o - i : (o + 1440) - i)
+    }, 0)
+  }
+
   function openEdit(date: string, map: Record<string, { in: string | null; out: string | null }>) {
     setEditDate(date)
     setEditIn(to12hToHHMM(map[username]?.in))
@@ -275,33 +290,53 @@ function TimesTab({ username }: { username: string }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {grouped.map(([date, map]) => (
-              <tr key={date} className="hover:bg-gray-50">
-                <td className="px-1.5 py-1.5 text-gray-600 leading-tight">{fmtShortDate(date)}</td>
-                {STAFF.map(s => {
-                  const isMine = s === username
-                  const cellIn = map[s]?.in ?? <span className="text-gray-200">—</span>
-                  const cellOut = map[s]?.out ?? <span className="text-gray-200">—</span>
-                  const content = (
-                    <div className="flex flex-col items-center leading-tight">
-                      <span className="text-green-700">{cellIn}</span>
-                      <span className="text-orange-600">{cellOut}</span>
-                    </div>
-                  )
-                  if (isMine) {
-                    return (
-                      <td key={s} className="px-0.5 py-1">
-                        <button onClick={() => openEdit(date, map)}
-                          className="w-full rounded-lg hover:bg-blue-50 py-0.5 transition">
-                          {content}
-                        </button>
-                      </td>
-                    )
-                  }
-                  return <td key={s} className="px-0.5 py-1 text-center">{content}</td>
-                })}
-              </tr>
-            ))}
+            {grouped.map(([date, map], i) => {
+              const monthKey = date.slice(0, 7)
+              const nextMonthKey = grouped[i + 1]?.[0]?.slice(0, 7)
+              const isMonthEnd = nextMonthKey !== monthKey
+              return (
+                <Fragment key={date}>
+                  <tr className="hover:bg-gray-50">
+                    <td className="px-1.5 py-1.5 text-gray-600 leading-tight">{fmtShortDate(date)}</td>
+                    {STAFF.map(s => {
+                      const isMine = s === username
+                      const cellIn = map[s]?.in ?? <span className="text-gray-200">—</span>
+                      const cellOut = map[s]?.out ?? <span className="text-gray-200">—</span>
+                      const content = (
+                        <div className="flex flex-col items-center leading-tight">
+                          <span className="text-green-700">{cellIn}</span>
+                          <span className="text-orange-600">{cellOut}</span>
+                        </div>
+                      )
+                      if (isMine) {
+                        return (
+                          <td key={s} className="px-0.5 py-1">
+                            <button onClick={() => openEdit(date, map)}
+                              className="w-full rounded-lg hover:bg-blue-50 py-0.5 transition">
+                              {content}
+                            </button>
+                          </td>
+                        )
+                      }
+                      return <td key={s} className="px-0.5 py-1 text-center">{content}</td>
+                    })}
+                  </tr>
+                  {isMonthEnd && (
+                    <tr className="bg-gray-100 border-t-2 border-b-2 border-gray-300">
+                      <td className="px-1.5 py-2 text-[10px] font-bold text-gray-600 leading-tight">{monthKeyLabel(monthKey)}<br/>Total</td>
+                      {STAFF.map(s => {
+                        const mins = monthMinutesFor(s, monthKey)
+                        return (
+                          <td key={s} className="text-center px-0.5 py-2 text-[10px] font-bold text-gray-700">
+                            {mins ? minsToHrs(mins) : '—'}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  )}
+                </Fragment>
+              )
+            })}
           </tbody>
         </table>
       </div>
