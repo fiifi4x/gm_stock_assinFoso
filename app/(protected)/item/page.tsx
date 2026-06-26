@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { fmtDate } from '@/lib/fmtDate'
 import { usePolling } from '@/lib/usePolling'
 
@@ -253,7 +254,8 @@ function NameResolveRow({
   )
 }
 
-export default function InventoryPage() {
+function InventoryPageInner() {
+  const searchParams = useSearchParams()
   const [items, setItems] = useState<Item[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -267,7 +269,7 @@ export default function InventoryPage() {
   const [addForm, setAddForm] = useState(EMPTY_FORM)
   const [adding, setAdding] = useState(false)
 
-  const [tab, setTab] = useState<Tab>('List')
+  const [tab, setTab] = useState<Tab>(TABS.includes(searchParams.get('tab') as Tab) ? (searchParams.get('tab') as Tab) : 'List')
   const [flags, setFlags] = useState<any | null>(null)
   const [flagsLoading, setFlagsLoading] = useState(false)
   const [nameRes, setNameRes] = useState<NameRes | null>(null)
@@ -711,6 +713,14 @@ export default function InventoryPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function InventoryPage() {
+  return (
+    <Suspense fallback={<div className="py-20 text-center text-gray-400 text-xs">Loading…</div>}>
+      <InventoryPageInner />
+    </Suspense>
   )
 }
 

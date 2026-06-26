@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { fmtDate } from '@/lib/fmtDate'
 
 type Row = {
@@ -31,8 +32,10 @@ const fmt = (n: any) => n == null ? '—' : `₵${Number(n).toLocaleString('en-G
 const n = (v: any) => v == null ? '—' : Number(v).toLocaleString('en-GH', { minimumFractionDigits: 0 })
 const nz = (v: any) => (v == null || Number(v) === 0) ? '' : n(v)
 
-export default function CashAtBankClient({ rows }: { rows: Row[] }) {
-  const [tab, setTab] = useState<Tab>('List')
+function CashAtBankClientInner({ rows }: { rows: Row[] }) {
+  const searchParams = useSearchParams()
+  const initialTab = searchParams.get('tab')
+  const [tab, setTab] = useState<Tab>(TABS.includes(initialTab as Tab) ? (initialTab as Tab) : 'List')
   const [flags, setFlags] = useState<any | null>(null)
   const [flagsLoading, setFlagsLoading] = useState(false)
 
@@ -169,5 +172,13 @@ export default function CashAtBankClient({ rows }: { rows: Row[] }) {
         </div>
       )}
     </div>
+  )
+}
+
+export default function CashAtBankClient({ rows }: { rows: Row[] }) {
+  return (
+    <Suspense fallback={<div className="py-10 text-center text-gray-400">Loading…</div>}>
+      <CashAtBankClientInner rows={rows} />
+    </Suspense>
   )
 }

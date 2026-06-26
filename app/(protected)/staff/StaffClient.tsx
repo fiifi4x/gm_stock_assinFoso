@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect, useMemo, Fragment } from 'react'
+import { useState, useEffect, useMemo, Fragment, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { fmtDate } from '@/lib/fmtDate'
 import { usePolling } from '@/lib/usePolling'
 import {
@@ -1400,8 +1401,10 @@ function AnalyticsTab() {
 
 // ── MAIN ──────────────────────────────────────────────────────────────────────
 
-export default function StaffClient({ role, username }: { role: string; username: string }) {
-  const [tab, setTab] = useState<Tab>('Times')
+function StaffClientInner({ role, username }: { role: string; username: string }) {
+  const searchParams = useSearchParams()
+  const initialTab = searchParams.get('tab')
+  const [tab, setTab] = useState<Tab>(TABS.includes(initialTab as Tab) ? (initialTab as Tab) : 'Times')
 
   return (
     <div className="py-4 space-y-4">
@@ -1425,5 +1428,13 @@ export default function StaffClient({ role, username }: { role: string; username
       {tab === 'Rota' && <RotaTab />}
       {tab === 'Analytics' && <AnalyticsTab />}
     </div>
+  )
+}
+
+export default function StaffClient({ role, username }: { role: string; username: string }) {
+  return (
+    <Suspense fallback={<div className="py-10 text-center text-gray-400">Loading…</div>}>
+      <StaffClientInner role={role} username={username} />
+    </Suspense>
   )
 }

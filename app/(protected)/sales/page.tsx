@@ -273,7 +273,7 @@ function SalesPageInner() {
   const [editLines, setEditLines] = useState<EditLine[]>([])
   const [saving, setSaving] = useState(false)
 
-  const [tab, setTab] = useState<Tab>('List')
+  const [tab, setTab] = useState<Tab>(TABS.includes(searchParams.get('tab') as Tab) ? (searchParams.get('tab') as Tab) : 'List')
   const [flags, setFlags] = useState<any | null>(null)
   const [flagsLoading, setFlagsLoading] = useState(false)
 
