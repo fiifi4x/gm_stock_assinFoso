@@ -6,6 +6,7 @@ import { signOut } from 'next-auth/react'
 type NavUser = { name?: string | null; role?: string; username?: string }
 
 const allLinks = [
+  { href: '/today', label: 'Today', roles: ['owner','manager','staff'] },
   { href: '/item', label: 'Items', roles: ['owner','manager','staff'] },
   { href: '/sales', label: 'Sales', roles: ['owner','manager','staff'] },
   { href: '/bills', label: 'Bills', roles: ['owner','manager','staff'] },
@@ -26,7 +27,7 @@ export default function Nav({ user }: { user: NavUser }) {
   return (
     <nav className="hidden md:block bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-5xl mx-auto px-4 flex items-center justify-between h-14">
-        <Link href="/stock/counts" className="font-bold text-gray-900 text-lg tracking-tight">Grony</Link>
+        <Link href="/today" className="font-bold text-gray-900 text-lg tracking-tight">Grony</Link>
 
         {/* Desktop links */}
         <div className="hidden md:flex items-center gap-1">

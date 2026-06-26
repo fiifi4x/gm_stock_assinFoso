@@ -545,10 +545,16 @@ export default function InventoryPage() {
                           <p className="text-[10px] font-bold text-gray-900 truncate">{item.item_name}</p>
                           <p className="text-[9px] text-gray-400">{item.cf_group ?? 'No group'} · SOH: {Number(item.calculated_soh)}</p>
                         </div>
-                        <button onClick={() => startEdit(item)}
-                          className="shrink-0 text-[9px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded hover:bg-blue-100 ml-1">
-                          Edit
-                        </button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <a href={`/stock/${item.id}`}
+                            className="text-[9px] text-purple-600 font-semibold bg-purple-50 px-2 py-0.5 rounded hover:bg-purple-100">
+                            360°
+                          </a>
+                          <button onClick={() => startEdit(item)}
+                            className="text-[9px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded hover:bg-blue-100">
+                            Edit
+                          </button>
+                        </div>
                       </div>
 
                       {/* Loss history table */}

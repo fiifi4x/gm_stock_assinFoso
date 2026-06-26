@@ -6,7 +6,7 @@ import CashAtBankClient from './CashAtBankClient'
 export default async function CashAtBankPage() {
   const session = await auth()
   const role = (session?.user as any)?.role
-  if (role === 'staff') redirect('/stock/counts?tab=Daily')
+  if (role === 'staff') redirect('/today')
 
   const rows = await sql`
     SELECT entry_date, cash_counted, grony_personal_cash_in, debtors_cash_in,
