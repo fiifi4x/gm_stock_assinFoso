@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
+import { usePolling } from '@/lib/usePolling'
 
 type Expense = {
   id: number
@@ -51,12 +52,15 @@ export default function ExpensesPage() {
   const [form, setForm] = useState({ ...EMPTY_FORM })
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
+  function loadExpenses() {
     fetch('/api/expenses')
       .then(r => r.json())
       .then(data => { setExpenses(Array.isArray(data) ? data : []); setLoading(false) })
       .catch(() => setLoading(false))
-  }, [])
+  }
+
+  useEffect(() => { loadExpenses() }, [])
+  usePolling(loadExpenses, 5000, editId === null && !showForm)
 
   const filtered = useMemo(() => {
     let list = expenses

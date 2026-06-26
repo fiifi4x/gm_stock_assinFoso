@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { usePolling } from '@/lib/usePolling'
 
 type CountRecord = {
   id: number
@@ -107,18 +108,22 @@ function CountsHistoryPageInner() {
   const [overdueItems, setOverdueItems] = useState<DailyItem[]>([])
   const [dailyLoading, setDailyLoading] = useState(true)
 
-  useEffect(() => {
+  function loadRecords() {
     fetch('/api/stock/counts').then(r => r.json()).then(d => { setRecords(d); setLoading(false) })
-  }, [])
-
-  useEffect(() => {
+  }
+  function loadDaily() {
     Promise.all([
       fetch('/api/stock/daily').then(r => r.json()),
       fetch('/api/stock/overdue').then(r => r.json()),
     ]).then(([daily, overdue]) => {
       setDailyItems(daily); setOverdueItems(overdue); setDailyLoading(false)
     })
-  }, [])
+  }
+
+  useEffect(() => { loadRecords() }, [])
+  useEffect(() => { loadDaily() }, [])
+  usePolling(loadRecords, 5000, editingId === null)
+  usePolling(loadDaily, 5000, editingId === null)
 
   function removeDaily(id: number) { setDailyItems(prev => prev.filter(i => i.item_id !== id)) }
   function removeOverdue(id: number) { setOverdueItems(prev => prev.filter(i => i.item_id !== id)) }

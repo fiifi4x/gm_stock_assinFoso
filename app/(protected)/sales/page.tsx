@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { fmtDate } from '@/lib/fmtDate'
+import { usePolling } from '@/lib/usePolling'
 
 const MONTHS = ['Ja','Fe','Mr','Ap','My','Ju','Jl','Au','Se','Oc','No','De']
 const DAYS   = ['Su','Mo','Tu','We','Th','Fr','Sa']
@@ -290,7 +291,7 @@ function SalesPageInner() {
     }
   }, [tab, flags, flagsLoading])
 
-  useEffect(() => {
+  function loadReceipts() {
     Promise.all([
       fetch('/api/sales').then(r => r.json()),
       fetch('/api/sales/all-lines').then(r => r.json()),
@@ -306,7 +307,10 @@ function SalesPageInner() {
       setLinesMap(map)
       setLoading(false)
     }).catch(() => setLoading(false))
-  }, [])
+  }
+
+  useEffect(() => { loadReceipts() }, [])
+  usePolling(loadReceipts, 5000, editingId === null)
 
   useEffect(() => {
     if (!autoReceiptId || autoOpened.current || receipts.length === 0) return

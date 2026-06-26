@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
+import { usePolling } from '@/lib/usePolling'
 
 type Bill = {
   id: number
@@ -47,7 +48,7 @@ export default function BillsPage() {
   const [editForm, setEditForm] = useState({ bill_date: '', vendor_name: '', status: 'paid' })
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
+  function loadBills() {
     Promise.all([
       fetch('/api/bills').then(r => r.json()),
       fetch('/api/bills/all-lines').then(r => r.json()),
@@ -63,7 +64,10 @@ export default function BillsPage() {
       setLinesMap(map)
       setLoading(false)
     }).catch(() => setLoading(false))
-  }, [])
+  }
+
+  useEffect(() => { loadBills() }, [])
+  usePolling(loadBills, 5000, editingId === null)
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()

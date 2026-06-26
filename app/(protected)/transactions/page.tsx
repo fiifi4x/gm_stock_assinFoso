@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { usePolling } from '@/lib/usePolling'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type TxType = 'bill' | 'sale' | 'count' | 'expense'
@@ -391,7 +392,7 @@ export default function DayBookPage() {
   const [dateTo, setDateTo] = useState('')
   const [ledger, setLedger] = useState<{ id: number; name: string } | null>(null)
 
-  useEffect(() => {
+  function loadTransactions() {
     fetch('/api/transactions')
       .then(r => r.json())
       .then(d => setTxs(Array.isArray(d) ? d : []))
@@ -402,7 +403,10 @@ export default function DayBookPage() {
       .then(r => r.json())
       .then(d => setPresence(d && typeof d === 'object' ? d : {}))
       .catch(() => {})
-  }, [])
+  }
+
+  useEffect(() => { loadTransactions() }, [])
+  usePolling(loadTransactions, 5000)
 
   const newLinks = {
     Sales: '/sales/new',

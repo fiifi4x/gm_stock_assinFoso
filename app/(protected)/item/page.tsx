@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { fmtDate } from '@/lib/fmtDate'
+import { usePolling } from '@/lib/usePolling'
 
 type Item = {
   id: number
@@ -324,7 +325,7 @@ export default function InventoryPage() {
     })
   }
 
-  useEffect(() => {
+  function loadItems() {
     Promise.all([
       fetch('/api/items').then(r => r.json()),
       fetch('/api/losses/all').then(r => r.json()),
@@ -340,7 +341,10 @@ export default function InventoryPage() {
       setLossMap(map)
       setLoading(false)
     })
-  }, [])
+  }
+
+  useEffect(() => { loadItems() }, [])
+  usePolling(loadItems, 5000, editingId === null && !showAdd)
 
   const groups = ['All', ...Array.from(new Set(items.map(i => i.cf_group ?? 'Ungrouped'))).sort()]
 

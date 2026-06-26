@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
 import { fmtDate } from '@/lib/fmtDate'
+import { usePolling } from '@/lib/usePolling'
 
 const STAFF = ['joe', 'bino', 'james', 'rawlings']
 
@@ -140,6 +141,7 @@ function TimesTab({ username }: { username: string }) {
   }
 
   useEffect(() => { load() }, [])
+  usePolling(load, 5000, !pickingTime && editDate === null)
 
   async function clock(action: 'in' | 'out') {
     const time = pickingTime ? hhmmTo12h(customTime) : nowAs12h()
