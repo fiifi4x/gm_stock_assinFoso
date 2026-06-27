@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import { useSession } from 'next-auth/react'
 import { fmtDate } from '@/lib/fmtDate'
 import { usePolling } from '@/lib/usePolling'
 
@@ -28,7 +27,7 @@ type Line = {
   usage_unit: string | null
 }
 
-type EditLine = { id: number; item_name: string; quantity: string; item_price: string }
+type EditLine = { id: number | null; itemId: number | null; item_name: string; quantity: string; item_price: string }
 
 const MONTHS = ['Ja','Fe','Mr','Ap','My','Ju','Jl','Au','Se','Oc','No','De']
 const DAYS   = ['Su','Mo','Tu','We','Th','Fr','Sa']
@@ -242,9 +241,6 @@ type Props = {
 }
 
 export default function SalesTab({ items, groupFilter, search, violation }: Props) {
-  const { data: session } = useSession()
-  const role = (session?.user as any)?.role
-  const canDelete = ['owner', 'manager'].includes(role)
   const [receipts, setReceipts] = useState<Receipt[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -253,8 +249,10 @@ export default function SalesTab({ items, groupFilter, search, violation }: Prop
   const [editForm, setEditForm] = useState({ receipt_date: '', customer_name: '', cash_counted: '' })
   const [editLines, setEditLines] = useState<EditLine[]>([])
   const [saving, setSaving] = useState(false)
+  const [editError, setEditError] = useState('')
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
+  const [newItemQuery, setNewItemQuery] = useState('')
   const [flags, setFlags] = useState<any | null>(null)
   const [flagsLoading, setFlagsLoading] = useState(false)
 
@@ -326,11 +324,28 @@ export default function SalesTab({ items, groupFilter, search, violation }: Prop
     const rLines = linesMap[r.id] ?? []
     setEditLines(rLines.map(l => ({
       id: l.id,
+      itemId: null,
       item_name: l.item_name,
       quantity: l.quantity ? parseFloat(l.quantity).toString() : '1',
       item_price: l.item_price ? parseFloat(l.item_price).toString() : '0',
     })))
+    setNewItemQuery('')
     setEditingId(r.id)
+  }
+
+  function addEditLine(item: Item & { selling_rate?: string | number | null }) {
+    setEditLines(prev => [...prev, {
+      id: null,
+      itemId: item.id,
+      item_name: item.item_name,
+      quantity: '1',
+      item_price: item.selling_rate != null ? String(item.selling_rate) : '0',
+    }])
+    setNewItemQuery('')
+  }
+
+  function removeEditLine(idx: number) {
+    setEditLines(prev => prev.filter((_, i) => i !== idx))
   }
 
   async function deleteReceipt(id: number) {
@@ -361,6 +376,7 @@ export default function SalesTab({ items, groupFilter, search, violation }: Prop
   async function saveEdit() {
     if (editingId == null) return
     setSaving(true)
+    setEditError('')
     const headerRes = await fetch(`/api/sales/${editingId}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -369,18 +385,21 @@ export default function SalesTab({ items, groupFilter, search, violation }: Prop
         cash_counted: editForm.cash_counted ? parseFloat(editForm.cash_counted) : null,
       }),
     })
-    await fetch(`/api/sales/${editingId}/lines`, {
+    const linesRes = await fetch(`/api/sales/${editingId}/lines`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ lines: editLines }),
     })
     setSaving(false)
-    if (headerRes.ok) {
+    if (headerRes.ok && linesRes.ok) {
       const updated = await headerRes.json()
       setReceipts(prev => prev.map(r => r.id === editingId ? { ...r, ...updated } : r))
       const lRes = await fetch(`/api/sales/${editingId}`)
       const freshLines = await lRes.json()
       setLinesMap(prev => ({ ...prev, [editingId]: freshLines }))
       setEditingId(null)
+    } else {
+      const d = await (linesRes.ok ? headerRes : linesRes).json().catch(() => ({}))
+      setEditError(d.error || 'Could not save changes. Please try again.')
     }
   }
 
@@ -519,11 +538,12 @@ export default function SalesTab({ items, groupFilter, search, violation }: Prop
                         <th className="text-right px-1 py-0.5 font-semibold text-gray-500">Qty</th>
                         <th className="text-right px-1 py-0.5 font-semibold text-gray-500">SP</th>
                         <th className="text-right px-1 py-0.5 font-semibold text-gray-500">Total</th>
+                        <th className="w-5" />
                       </tr>
                     </thead>
                     <tbody>
                       {editLines.map((l, idx) => (
-                        <tr key={l.id} className="border-b border-gray-100">
+                        <tr key={l.id ?? `new-${idx}`} className="border-b border-gray-100">
                           <td className="px-1 py-0.5">
                             <input value={l.item_name} onChange={e => updateEditLine(idx, 'item_name', e.target.value)}
                               className="w-full bg-gray-50 border border-gray-200 rounded px-1 py-0.5 text-[10px] outline-none focus:ring-1 focus:ring-blue-400" />
@@ -539,6 +559,10 @@ export default function SalesTab({ items, groupFilter, search, violation }: Prop
                           <td className="px-1 py-0.5 text-right text-gray-700">
                             {((parseFloat(l.quantity)||0)*(parseFloat(l.item_price)||0)).toFixed(0)}
                           </td>
+                          <td className="px-0.5 py-0.5 text-center">
+                            <button onClick={() => removeEditLine(idx)} title="Remove item"
+                              className="text-red-500 hover:text-red-700 font-bold leading-none">×</button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -546,9 +570,32 @@ export default function SalesTab({ items, groupFilter, search, violation }: Prop
                       <tr className="border-t border-gray-200 bg-gray-50">
                         <td colSpan={3} className="px-1 py-0.5 text-right font-bold text-gray-600">Total</td>
                         <td className="px-1 py-0.5 text-right font-bold text-gray-900">{editTotal.toFixed(0)}</td>
+                        <td />
                       </tr>
                     </tfoot>
                   </table>
+
+                  {/* Add item to receipt */}
+                  <div className="relative">
+                    <input value={newItemQuery} onChange={e => setNewItemQuery(e.target.value)}
+                      placeholder="+ Search item to add…"
+                      className="w-full bg-gray-50 border border-gray-200 rounded px-2 py-1 text-[10px] outline-none focus:ring-1 focus:ring-blue-400" />
+                    {newItemQuery.trim().length > 0 && (
+                      <div className="absolute z-20 left-0 right-0 mt-0.5 bg-white border border-gray-200 rounded shadow-lg max-h-32 overflow-y-auto">
+                        {items.filter(it => it.item_name.toLowerCase().includes(newItemQuery.trim().toLowerCase())).slice(0, 15).map(it => (
+                          <button key={it.id} onClick={() => addEditLine(it as any)}
+                            className="w-full text-left px-2 py-1 text-[10px] text-gray-800 hover:bg-blue-50 border-b border-gray-100 last:border-0">
+                            {it.item_name}
+                          </button>
+                        ))}
+                        {items.filter(it => it.item_name.toLowerCase().includes(newItemQuery.trim().toLowerCase())).length === 0 && (
+                          <p className="px-2 py-1.5 text-[10px] text-gray-400">No matching item</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {editError && <p className="text-[10px] text-red-500 font-medium text-center">{editError}</p>}
                   <div className="flex gap-1">
                     <button onClick={saveEdit} disabled={saving}
                       className="flex-1 bg-green-600 text-white text-[10px] font-bold rounded py-1 disabled:opacity-40">
@@ -556,10 +603,8 @@ export default function SalesTab({ items, groupFilter, search, violation }: Prop
                     </button>
                     <button onClick={() => setEditingId(null)}
                       className="px-3 py-1 bg-gray-100 text-gray-600 text-[10px] font-semibold rounded">Cancel</button>
-                    {canDelete && (
-                      <button onClick={() => setConfirmDeleteId(r.id)}
-                        className="px-3 py-1 bg-red-50 text-red-600 text-[10px] font-semibold rounded">Delete</button>
-                    )}
+                    <button onClick={() => setConfirmDeleteId(r.id)}
+                      className="px-3 py-1 bg-red-50 text-red-600 text-[10px] font-semibold rounded">Delete</button>
                   </div>
                   {confirmDeleteId === r.id && (
                     <div className="mt-1.5 px-2 py-2 bg-red-50 border border-red-100 rounded flex items-center justify-between gap-2">
@@ -589,12 +634,10 @@ export default function SalesTab({ items, groupFilter, search, violation }: Prop
                         className="text-[9px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded hover:bg-blue-100 transition">
                         Edit
                       </button>
-                      {canDelete && (
-                        <button onClick={() => setConfirmDeleteId(r.id)}
-                          className="text-[9px] text-red-600 font-semibold bg-red-50 px-2 py-0.5 rounded hover:bg-red-100 transition">
-                          Delete
-                        </button>
-                      )}
+                      <button onClick={() => setConfirmDeleteId(r.id)}
+                        className="text-[9px] text-red-600 font-semibold bg-red-50 px-2 py-0.5 rounded hover:bg-red-100 transition">
+                        Delete
+                      </button>
                     </div>
                   </div>
                   {confirmDeleteId === r.id && (

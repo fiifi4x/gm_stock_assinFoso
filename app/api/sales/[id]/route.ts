@@ -42,10 +42,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const role = (session.user as any)?.role
-  if (!['owner', 'manager'].includes(role)) {
-    return NextResponse.json({ error: 'Only owner or manager can delete a receipt' }, { status: 403 })
-  }
 
   const { id } = await params
   const receiptId = Number(id)
