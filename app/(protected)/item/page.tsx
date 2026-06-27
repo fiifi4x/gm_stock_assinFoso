@@ -94,6 +94,7 @@ export default function ItemHubPage() {
   const groupRef     = useRef<HTMLDivElement>(null)
   const violRef      = useRef<HTMLDivElement>(null)
   const hamburgerRef = useRef<HTMLDivElement>(null)
+  const swipeRef     = useRef<{ x: number; y: number } | null>(null)
 
   const [items, setItems]           = useState<Item[]>([])
   const [itemsLoading, setItemsLoading] = useState(true)
@@ -146,7 +147,6 @@ export default function ItemHubPage() {
         {/* Row 1: scrollable tabs + hamburger (hamburger outside scroll area to avoid clip) */}
         <div className="flex items-center pr-2">
           <div className="flex items-center gap-1 px-2 pt-1.5 pb-1 overflow-x-auto flex-1 min-w-0">
-            <button onClick={() => changeTab('today')}    className={tabCls(outerTab === 'today')}>Today</button>
             <button onClick={() => changeTab('items')}    className={tabCls(outerTab === 'items')}>Items</button>
             <button onClick={() => changeTab('sales')}    className={tabCls(outerTab === 'sales')}>Sales</button>
             <button onClick={() => changeTab('bills')}    className={tabCls(outerTab === 'bills')}>Bills</button>
@@ -266,7 +266,15 @@ export default function ItemHubPage() {
       </div>
 
       {/* ── Content ── */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto"
+        onTouchStart={e => { const t = e.touches[0]; swipeRef.current = { x: t.clientX, y: t.clientY } }}
+        onTouchEnd={e => {
+          if (!swipeRef.current) return
+          const dx = e.changedTouches[0].clientX - swipeRef.current.x
+          const dy = e.changedTouches[0].clientY - swipeRef.current.y
+          swipeRef.current = null
+          if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) changeTab('today')
+        }}>
         {addForm === 'sale'    && <div className="px-4"><NewSaleForm    onSuccess={() => { setAddForm(null); changeTab('sales') }} /></div>}
         {addForm === 'bill'    && <div className="px-4"><NewBillForm    onSuccess={() => { setAddForm(null); changeTab('bills') }} /></div>}
         {addForm === 'expense' && <div className="px-4"><NewExpenseForm onSuccess={() => { setAddForm(null); changeTab('expenses') }} /></div>}
