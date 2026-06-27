@@ -256,7 +256,7 @@ export default function SalesTab({ items, groupFilter, search, violation }: Prop
   const [flags, setFlags] = useState<any | null>(null)
   const [flagsLoading, setFlagsLoading] = useState(false)
 
-  const needsFlags = violation === 'no_cash' || violation === 'missing_days' || violation === 'cost_price'
+  const needsFlags = violation === 'no_cash' || violation === 'missing_days' || violation === 'cost_price' || violation === 'dup_receipt'
 
   useEffect(() => {
     if (needsFlags && !flags && !flagsLoading) {
@@ -264,7 +264,7 @@ export default function SalesTab({ items, groupFilter, search, violation }: Prop
       fetch('/api/flags')
         .then(r => r.ok ? r.json() : Promise.reject())
         .then(d => { setFlags(d); setFlagsLoading(false) })
-        .catch(() => { setFlags({ noCash: [], missingDays: [], costGteSell: [] }); setFlagsLoading(false) })
+        .catch(() => { setFlags({ noCash: [], missingDays: [], costGteSell: [], dupReceipts: [] }); setFlagsLoading(false) })
     }
   }, [needsFlags, flags, flagsLoading])
 
@@ -459,6 +459,31 @@ export default function SalesTab({ items, groupFilter, search, violation }: Prop
                 <CostPriceFix key={`${r.item_id}-${i}`} r={r} onFixed={itemId =>
                   setFlags((f: any) => f ? { ...f, costGteSell: f.costGteSell.filter((x: any) => x.item_id !== itemId) } : f)
                 } />
+              ))}
+            </div>
+        )}
+      </div>
+    )
+  }
+
+  if (violation === 'dup_receipt') {
+    return (
+      <div className="overflow-y-auto h-full py-2">
+        <p className="text-[10px] text-gray-400 px-2 mb-1">
+          {flagsLoading || !flags ? 'Loading…' : `${flags.dupReceipts.length} day${flags.dupReceipts.length !== 1 ? 's' : ''} with more than one receipt of the same customer type`}
+        </p>
+        {!flagsLoading && flags && (flags.dupReceipts.length === 0
+          ? <p className="py-4 text-center text-gray-400 text-[10px]">No duplicate WIC/GMC receipts found.</p>
+          : <div className="bg-white border-t border-b border-gray-200 divide-y divide-gray-100">
+              {flags.dupReceipts.map((r: any, i: number) => (
+                <div key={i} className="px-2 py-2">
+                  <p className="text-[10px] font-semibold text-gray-900">
+                    {fmtDate(r.receipt_date)} — {r.customer_type}
+                    <span className="ml-1 text-red-500">({r.receipt_count} receipts)</span>
+                  </p>
+                  <p className="text-[9px] text-gray-400 mt-0.5">{r.receipt_numbers}</p>
+                  <p className="text-[9px] text-gray-400 mt-0.5">Merge the items from the extra receipt(s) into one via Edit, then delete the rest.</p>
+                </div>
               ))}
             </div>
         )}

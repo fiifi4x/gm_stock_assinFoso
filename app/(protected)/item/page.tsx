@@ -72,6 +72,7 @@ const VIOLATIONS: Record<OuterTab, { key: string; label: string }[]> = {
     { key: 'no_cash',      label: 'No Cash' },
     { key: 'missing_days', label: 'Missing Days' },
     { key: 'cost_price',   label: 'Cost Price' },
+    { key: 'dup_receipt',  label: 'Dup Receipts' },
   ],
   bills: [],
   counts: [

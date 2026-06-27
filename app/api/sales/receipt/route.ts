@@ -17,8 +17,20 @@ export async function POST(req: NextRequest) {
 
   const enteredBy = session.user?.name || (session.user as any)?.username || null
   const customer = customerName ?? null
+  const customerType = customer === 'Grony Multimedia as Customer' ? 'GMC' : 'WIC'
 
   try {
+    const [existingReceipt] = await sql`
+      SELECT id, receipt_number FROM sales_receipts
+      WHERE receipt_date::date = ${date}
+        AND (CASE WHEN customer_name = 'Grony Multimedia as Customer' THEN 'GMC' ELSE 'WIC' END) = ${customerType}
+    `
+    if (existingReceipt) {
+      return NextResponse.json({
+        error: `A ${customerType} sales receipt already exists for ${date} (${existingReceipt.receipt_number}). Edit that receipt to add items instead of creating a new one.`,
+      }, { status: 409 })
+    }
+
     let receipt
     try {
       [receipt] = await sql`

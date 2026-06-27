@@ -76,6 +76,7 @@ export async function GET() {
     noGroup,
     noStaffTimes,
     uncheckedCab,
+    dupReceipts,
   ] = await Promise.all([
 
     // 1. Walk-in customers with no cash counted
@@ -232,6 +233,20 @@ export async function GET() {
       )
       ORDER BY w.week_start DESC
     `),
+
+    // 9. Dates with more than one receipt for the same customer type (WIC or GMC)
+    safeQuery(() => sql`
+      SELECT
+        receipt_date::text AS receipt_date,
+        CASE WHEN customer_name = 'Grony Multimedia as Customer' THEN 'GMC' ELSE 'WIC' END AS customer_type,
+        COUNT(*) AS receipt_count,
+        STRING_AGG(receipt_number, ', ' ORDER BY receipt_number) AS receipt_numbers,
+        STRING_AGG(id::text, ',' ORDER BY id) AS receipt_ids
+      FROM sales_receipts
+      GROUP BY receipt_date::date, CASE WHEN customer_name = 'Grony Multimedia as Customer' THEN 'GMC' ELSE 'WIC' END
+      HAVING COUNT(*) > 1
+      ORDER BY receipt_date DESC
+    `),
   ])
 
   const filteredDups = duplicates.filter((r: any) => shouldKeepPair(r.name1, r.name2))
@@ -243,5 +258,5 @@ export async function GET() {
     ORDER BY group_name
   `)
 
-  return NextResponse.json({ noCash, missingDays, duplicates: filteredDups, costGteSell, notInInventory, noGroup, noStaffTimes, uncheckedCab, groupNames: groupNames.map((r: any) => r.group_name) })
+  return NextResponse.json({ noCash, missingDays, duplicates: filteredDups, costGteSell, notInInventory, noGroup, noStaffTimes, uncheckedCab, dupReceipts, groupNames: groupNames.map((r: any) => r.group_name) })
 }
