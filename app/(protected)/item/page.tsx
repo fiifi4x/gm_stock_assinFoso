@@ -93,7 +93,6 @@ export default function ItemHubPage() {
   const [hamburgerOpen, setHamburgerOpen] = useState(false)
   const [addForm, setAddForm]             = useState<'item' | 'sale' | 'bill' | 'expense' | null>(null)
   const groupRef     = useRef<HTMLDivElement>(null)
-  const violRef      = useRef<HTMLDivElement>(null)
   const hamburgerRef = useRef<HTMLDivElement>(null)
   const swipeRef     = useRef<{ x: number; y: number } | null>(null)
 
@@ -113,7 +112,6 @@ export default function ItemHubPage() {
   useEffect(() => {
     function handler(e: MouseEvent) {
       if (groupRef.current && !groupRef.current.contains(e.target as Node)) setGroupOpen(false)
-      if (violRef.current && !violRef.current.contains(e.target as Node)) setViolationOpen(false)
       if (hamburgerRef.current && !hamburgerRef.current.contains(e.target as Node)) setHamburgerOpen(false)
     }
     document.addEventListener('mousedown', handler)
@@ -124,6 +122,7 @@ export default function ItemHubPage() {
     if (outerTab !== t) prevTabRef.current = outerTab
     setOuterTab(t)
     setViolation(null)
+    setViolationOpen(false)
     setAddForm(null)
     if (t !== 'items') setProductType('all')
   }
@@ -216,34 +215,20 @@ export default function ItemHubPage() {
               )}
             </div>
 
-            {/* Violations dropdown */}
+            {/* Violations toggle */}
             {currentViolations.length > 0 && (
               <>
                 <div className="w-px h-4 bg-gray-200 shrink-0" />
-                <div className="relative shrink-0" ref={violRef}>
-                  <button onClick={() => setViolationOpen(o => !o)}
-                    className={`text-xs font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap flex items-center gap-1 transition
-                      ${violation ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-                    {activeViolationLabel ?? 'Violations'} <span className="text-[10px]">▾</span>
-                  </button>
-                  {violationOpen && (
-                    <div className="absolute top-full left-0 mt-0.5 bg-white border border-gray-200 rounded-lg shadow-lg z-30 min-w-[150px]">
-                      {currentViolations.map(v => (
-                        <button key={v.key} onClick={() => { setViolation(violation === v.key ? null : v.key); setViolationOpen(false) }}
-                          className={`w-full text-left px-3 py-1.5 text-xs hover:bg-red-50 transition
-                            ${violation === v.key ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
-                          {v.label}
-                        </button>
-                      ))}
-                      {violation && (
-                        <button onClick={() => { setViolation(null); setViolationOpen(false) }}
-                          className="w-full text-left px-3 py-1.5 text-xs text-gray-400 hover:bg-gray-50 border-t border-gray-100 transition">
-                          Clear filter
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
+                <button onClick={() => {
+                    const opening = !violationOpen
+                    setViolationOpen(opening)
+                    if (opening) setViolation(currentViolations[0].key)
+                    else setViolation(null)
+                  }}
+                  className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap flex items-center gap-1 transition
+                    ${violationOpen ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                  Violations <span className="text-[10px]">{violationOpen ? '▴' : '▾'}</span>
+                </button>
               </>
             )}
 
@@ -263,6 +248,19 @@ export default function ItemHubPage() {
                 </button>
               )
             })()}
+          </div>
+        )}
+
+        {/* Violations sub-tab row */}
+        {violationOpen && currentViolations.length > 0 && (
+          <div className="flex items-center gap-1 px-2 py-1 bg-red-50 border-t border-red-100 overflow-x-auto">
+            {currentViolations.map(v => (
+              <button key={v.key} onClick={() => setViolation(v.key)}
+                className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-lg transition whitespace-nowrap
+                  ${violation === v.key ? 'bg-red-600 text-white' : 'bg-white border border-red-200 text-red-700 hover:bg-red-100'}`}>
+                {v.label}
+              </button>
+            ))}
           </div>
         )}
       </div>
