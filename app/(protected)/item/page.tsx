@@ -169,19 +169,36 @@ function ItemHubPageInner() {
   useEffect(() => { loadBadgeData() }, [])
   usePolling(loadBadgeData, 20000)
 
-  const badgeCounts: Partial<Record<OuterTab, number>> = useMemo(() => {
+  const violationCounts: Record<string, number> = useMemo(() => {
     const negSoh = items.filter(i => Number(i.calculated_soh) <= 0).length
     const noSp = items.filter(i => !i.selling_rate || parseFloat(i.selling_rate) === 0).length
     const noCp = items.filter(i => !i.purchase_rate || parseFloat(i.purchase_rate) === 0).length
     const f = globalFlags
     return {
-      items: negSoh + noSp + noCp + (f?.noGroup?.length ?? 0) + (f?.duplicates?.length ?? 0),
-      sales: (f?.noCash?.length ?? 0) + (f?.missingDays?.length ?? 0) + (f?.costGteSell?.length ?? 0) + (f?.dupReceipts?.length ?? 0),
-      counts: pendingCounts.daily + pendingCounts.overdue,
-      cab: f?.uncheckedCab?.length ?? 0,
-      staff: f?.noStaffTimes?.length ?? 0,
+      neg_soh: negSoh,
+      no_sp: noSp,
+      no_cp: noCp,
+      no_group: f?.noGroup?.length ?? 0,
+      duplicates: f?.duplicates?.length ?? 0,
+      no_cash: f?.noCash?.length ?? 0,
+      missing_days: f?.missingDays?.length ?? 0,
+      cost_price: f?.costGteSell?.length ?? 0,
+      dup_receipt: f?.dupReceipts?.length ?? 0,
+      daily: pendingCounts.daily,
+      '15day': pendingCounts.overdue,
     }
   }, [items, globalFlags, pendingCounts])
+
+  const badgeCounts: Partial<Record<OuterTab, number>> = useMemo(() => {
+    const v = violationCounts
+    return {
+      items: v.neg_soh + v.no_sp + v.no_cp + v.no_group + v.duplicates,
+      sales: v.no_cash + v.missing_days + v.cost_price + v.dup_receipt,
+      counts: v.daily + v['15day'],
+      cab: globalFlags?.uncheckedCab?.length ?? 0,
+      staff: globalFlags?.noStaffTimes?.length ?? 0,
+    }
+  }, [violationCounts, globalFlags])
 
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -350,13 +367,22 @@ function ItemHubPageInner() {
         {/* Violations sub-tab row */}
         {violationOpen && currentViolations.length > 0 && (
           <div className="flex items-center gap-1 px-2 py-1 bg-red-50 border-t border-red-100 overflow-x-auto">
-            {currentViolations.map(v => (
-              <button key={v.key} onClick={() => setViolation(v.key)}
-                className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-lg transition whitespace-nowrap
-                  ${violation === v.key ? 'bg-red-600 text-white' : 'bg-white border border-red-200 text-red-700 hover:bg-red-100'}`}>
-                {v.label}
-              </button>
-            ))}
+            {currentViolations.map(v => {
+              const c = violationCounts[v.key] ?? 0
+              return (
+                <button key={v.key} onClick={() => setViolation(v.key)}
+                  className={`shrink-0 flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg transition whitespace-nowrap
+                    ${violation === v.key ? 'bg-red-600 text-white' : 'bg-white border border-red-200 text-red-700 hover:bg-red-100'}`}>
+                  {v.label}
+                  {c > 0 && (
+                    <span className={`text-[10px] font-bold rounded-full px-1.5 leading-tight
+                      ${violation === v.key ? 'bg-white/25 text-white' : 'bg-red-600 text-white'}`}>
+                      {c > 99 ? '99+' : c}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
           </div>
         )}
       </div>
