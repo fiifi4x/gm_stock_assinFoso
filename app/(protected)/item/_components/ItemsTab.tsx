@@ -254,16 +254,17 @@ type Props = {
   search: string
   violation: string | null
   onItemsChanged: (items: Item[]) => void
+  showAdd?: boolean
+  onCloseAdd?: () => void
 }
 
-export default function ItemsTab({ items, group, productType, search, violation, onItemsChanged }: Props) {
+export default function ItemsTab({ items, group, productType, search, violation, onItemsChanged, showAdd = false, onCloseAdd }: Props) {
   const [lossMap, setLossMap] = useState<Record<number, DayRow[]>>({})
   const [lossLoading, setLossLoading] = useState(true)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editForm, setEditForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
-  const [showAdd, setShowAdd] = useState(false)
   const [addForm, setAddForm] = useState(EMPTY_FORM)
   const [adding, setAdding] = useState(false)
   const [flags, setFlags] = useState<any | null>(null)
@@ -397,7 +398,7 @@ export default function ItemsTab({ items, group, productType, search, violation,
     if (res.ok) {
       const newItem = await res.json()
       onItemsChanged([...items, { ...newItem, calculated_soh: 0 }])
-      setAddForm(EMPTY_FORM); setShowAdd(false)
+      setAddForm(EMPTY_FORM); onCloseAdd?.()
     }
   }
 
@@ -449,12 +450,8 @@ export default function ItemsTab({ items, group, productType, search, violation,
     <div className="flex h-full min-h-0">
       {/* LEFT: compact item cards */}
       <div className="w-2/5 border-r border-gray-200 overflow-y-auto min-h-0">
-        <div className="flex items-center justify-between px-2 py-1 border-b border-gray-100 bg-gray-50 sticky top-0 z-10">
+        <div className="px-2 py-1 border-b border-gray-100 bg-gray-50 sticky top-0 z-10">
           <span className="text-[9px] text-gray-400">{filteredItems.length} items</span>
-          <button onClick={() => { setShowAdd(v => !v); setSelectedId(null) }}
-            className="shrink-0 bg-blue-600 text-white text-[9px] font-bold px-2 py-0.5 rounded hover:bg-blue-500">
-            + Add
-          </button>
         </div>
         {filteredItems.map(item => {
           const soh = Number(item.calculated_soh)
@@ -486,7 +483,7 @@ export default function ItemsTab({ items, group, productType, search, violation,
                 className="flex-1 bg-blue-600 text-white text-[10px] font-bold rounded py-1 disabled:opacity-40">
                 {adding ? 'Saving…' : 'Save'}
               </button>
-              <button onClick={() => setShowAdd(false)}
+              <button onClick={() => onCloseAdd?.()}
                 className="px-3 py-1 bg-gray-100 text-gray-600 text-[10px] font-semibold rounded">Cancel</button>
             </div>
           </div>

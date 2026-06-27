@@ -91,7 +91,7 @@ export default function ItemHubPage() {
   const [groupOpen, setGroupOpen]       = useState(false)
   const [violationOpen, setViolationOpen] = useState(false)
   const [hamburgerOpen, setHamburgerOpen] = useState(false)
-  const [addForm, setAddForm]             = useState<'sale' | 'bill' | 'expense' | null>(null)
+  const [addForm, setAddForm]             = useState<'item' | 'sale' | 'bill' | 'expense' | null>(null)
   const groupRef     = useRef<HTMLDivElement>(null)
   const violRef      = useRef<HTMLDivElement>(null)
   const hamburgerRef = useRef<HTMLDivElement>(null)
@@ -252,9 +252,9 @@ export default function ItemHubPage() {
               placeholder="Search…"
               className="min-w-0 w-24 flex-1 text-xs bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-blue-400" />
 
-            {/* New button — Sales, Bills, Expenses only */}
-            {(['sales', 'bills', 'expenses'] as OuterTab[]).includes(outerTab) && (() => {
-              const formKey = outerTab === 'sales' ? 'sale' : outerTab === 'bills' ? 'bill' : 'expense'
+            {/* New button — Items, Sales, Bills, Expenses only */}
+            {(['items', 'sales', 'bills', 'expenses'] as OuterTab[]).includes(outerTab) && (() => {
+              const formKey = outerTab === 'items' ? 'item' : outerTab === 'sales' ? 'sale' : outerTab === 'bills' ? 'bill' : 'expense'
               return (
                 <button onClick={() => setAddForm(addForm === formKey ? null : formKey)}
                   className={`shrink-0 text-xs font-semibold px-3 py-1 rounded-lg transition
@@ -277,17 +277,17 @@ export default function ItemHubPage() {
           swipeRef.current = null
           if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) changeTab(outerTab === 'today' ? prevTabRef.current : 'today')
         }}>
-        {addForm === 'sale'    && <div className="px-4"><NewSaleForm    onSuccess={() => { setAddForm(null); changeTab('sales') }} /></div>}
-        {addForm === 'bill'    && <div className="px-4"><NewBillForm    onSuccess={() => { setAddForm(null); changeTab('bills') }} /></div>}
-        {addForm === 'expense' && <div className="px-4"><NewExpenseForm onSuccess={() => { setAddForm(null); changeTab('expenses') }} /></div>}
-        {!addForm && outerTab === 'today' && (
+        {addForm === 'sale'    && outerTab === 'sales'    && <div className="px-4"><NewSaleForm    onSuccess={() => { setAddForm(null); changeTab('sales') }} /></div>}
+        {addForm === 'bill'    && outerTab === 'bills'    && <div className="px-4"><NewBillForm    onSuccess={() => { setAddForm(null); changeTab('bills') }} /></div>}
+        {addForm === 'expense' && outerTab === 'expenses' && <div className="px-4"><NewExpenseForm onSuccess={() => { setAddForm(null); changeTab('expenses') }} /></div>}
+        {outerTab === 'today' && !(addForm === 'sale' || addForm === 'bill' || addForm === 'expense') && (
           <TabErrorBoundary>
             <div className="h-full overflow-y-auto px-4">
               <TodayContent />
             </div>
           </TabErrorBoundary>
         )}
-        {!addForm && outerTab === 'items' && (
+        {outerTab === 'items' && (
           itemsLoading
             ? <div className="py-20 text-center text-gray-400 text-xs">Loading…</div>
             : <ItemsTab
@@ -297,13 +297,15 @@ export default function ItemHubPage() {
                 search={search}
                 violation={violation}
                 onItemsChanged={setItems}
+                showAdd={addForm === 'item'}
+                onCloseAdd={() => setAddForm(null)}
               />
         )}
-        {!addForm && outerTab === 'sales'    && <SalesTab items={items} groupFilter={group} search={search} violation={violation} />}
-        {!addForm && outerTab === 'bills'    && <BillsTab items={items} groupFilter={group} search={search} />}
-        {!addForm && outerTab === 'counts'   && <CountsTab items={items} groupFilter={group} search={search} violation={violation} />}
-        {!addForm && outerTab === 'expenses' && <ExpensesTab search={search} />}
-        {!addForm && outerTab === 'cab'      && <CABTab />}
+        {addForm !== 'sale'    && outerTab === 'sales'    && <SalesTab items={items} groupFilter={group} search={search} violation={violation} />}
+        {addForm !== 'bill'    && outerTab === 'bills'    && <BillsTab items={items} groupFilter={group} search={search} />}
+        {outerTab === 'counts'   && <CountsTab items={items} groupFilter={group} search={search} violation={violation} />}
+        {addForm !== 'expense' && outerTab === 'expenses' && <ExpensesTab search={search} />}
+        {outerTab === 'cab'      && <CABTab />}
       </div>
     </div>
   )
