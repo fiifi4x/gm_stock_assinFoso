@@ -29,6 +29,15 @@ const TodayContent    = dynamic(() => import('./_components/TodayContent'), { ss
 const NewSaleForm     = dynamic(() => import('../sales/new/page'),     { ssr: false, loading: () => <div className="py-10 text-center text-gray-400 text-sm">Loading…</div> })
 const NewBillForm     = dynamic(() => import('../bills/new/page'),     { ssr: false, loading: () => <div className="py-10 text-center text-gray-400 text-sm">Loading…</div> })
 const NewExpenseForm  = dynamic(() => import('../expenses/new/page'),  { ssr: false, loading: () => <div className="py-10 text-center text-gray-400 text-sm">Loading…</div> })
+const AnalyticsPanel  = dynamic(() => import('./_components/AnalyticsPanel'), { ssr: false, loading: () => <div className="py-10 text-center text-gray-400 text-xs">Loading analytics…</div> })
+
+// Defined locally (not imported from AnalyticsPanel.tsx) -- a cross-file type
+// import here previously caused the analytics/recharts bundle to get pulled
+// into the server bundle and crash the page on Vercel with a black screen.
+type AnaSection = 'Items' | 'Sales' | 'Bills' | 'Counts' | 'Expenses'
+const ANA_SECTION: Partial<Record<OuterTab, AnaSection>> = {
+  items: 'Items', sales: 'Sales', bills: 'Bills', counts: 'Counts', expenses: 'Expenses',
+}
 
 type OuterTab = 'today' | 'items' | 'sales' | 'bills' | 'counts' | 'expenses' | 'cab'
 
@@ -90,6 +99,7 @@ export default function ItemHubPage() {
   const [violation, setViolation]       = useState<string | null>(null)
   const [groupOpen, setGroupOpen]       = useState(false)
   const [violationOpen, setViolationOpen] = useState(false)
+  const [anaOpen, setAnaOpen]           = useState(false)
   const [hamburgerOpen, setHamburgerOpen] = useState(false)
   const [addForm, setAddForm]             = useState<'item' | 'sale' | 'bill' | 'expense' | null>(null)
   const groupRef     = useRef<HTMLDivElement>(null)
@@ -123,6 +133,7 @@ export default function ItemHubPage() {
     setOuterTab(t)
     setViolation(null)
     setViolationOpen(false)
+    setAnaOpen(false)
     setAddForm(null)
     if (t !== 'items') setProductType('all')
   }
@@ -222,12 +233,28 @@ export default function ItemHubPage() {
                 <button onClick={() => {
                     const opening = !violationOpen
                     setViolationOpen(opening)
-                    if (opening) setViolation(currentViolations[0].key)
+                    if (opening) { setViolation(currentViolations[0].key); setAnaOpen(false) }
                     else setViolation(null)
                   }}
                   className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap flex items-center gap-1 transition
                     ${violationOpen ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
                   Violations <span className="text-[10px]">{violationOpen ? '▴' : '▾'}</span>
+                </button>
+              </>
+            )}
+
+            {/* Analytics toggle */}
+            {ANA_SECTION[outerTab] && (
+              <>
+                <div className="w-px h-4 bg-gray-200 shrink-0" />
+                <button onClick={() => setAnaOpen(o => {
+                    const opening = !o
+                    if (opening) { setViolationOpen(false); setViolation(null) }
+                    return opening
+                  })}
+                  className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap flex items-center gap-1 transition
+                    ${anaOpen ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                  Ana
                 </button>
               </>
             )}
@@ -278,14 +305,19 @@ export default function ItemHubPage() {
         {addForm === 'sale'    && outerTab === 'sales'    && <div className="px-4"><NewSaleForm    onSuccess={() => { setAddForm(null); changeTab('sales') }} /></div>}
         {addForm === 'bill'    && outerTab === 'bills'    && <div className="px-4"><NewBillForm    onSuccess={() => { setAddForm(null); changeTab('bills') }} /></div>}
         {addForm === 'expense' && outerTab === 'expenses' && <div className="px-4"><NewExpenseForm onSuccess={() => { setAddForm(null); changeTab('expenses') }} /></div>}
-        {outerTab === 'today' && !(addForm === 'sale' || addForm === 'bill' || addForm === 'expense') && (
+        {anaOpen && ANA_SECTION[outerTab] && !addForm && (
+          <TabErrorBoundary>
+            <AnalyticsPanel section={ANA_SECTION[outerTab]!} />
+          </TabErrorBoundary>
+        )}
+        {!anaOpen && outerTab === 'today' && !(addForm === 'sale' || addForm === 'bill' || addForm === 'expense') && (
           <TabErrorBoundary>
             <div className="h-full overflow-y-auto px-4">
               <TodayContent />
             </div>
           </TabErrorBoundary>
         )}
-        {outerTab === 'items' && (
+        {!anaOpen && outerTab === 'items' && (
           itemsLoading
             ? <div className="py-20 text-center text-gray-400 text-xs">Loading…</div>
             : <ItemsTab
@@ -299,11 +331,11 @@ export default function ItemHubPage() {
                 onCloseAdd={() => setAddForm(null)}
               />
         )}
-        {addForm !== 'sale'    && outerTab === 'sales'    && <SalesTab items={items} groupFilter={group} search={search} violation={violation} />}
-        {addForm !== 'bill'    && outerTab === 'bills'    && <BillsTab items={items} groupFilter={group} search={search} />}
-        {outerTab === 'counts'   && <CountsTab items={items} groupFilter={group} search={search} violation={violation} />}
-        {addForm !== 'expense' && outerTab === 'expenses' && <ExpensesTab search={search} />}
-        {outerTab === 'cab'      && <CABTab />}
+        {!anaOpen && addForm !== 'sale'    && outerTab === 'sales'    && <SalesTab items={items} groupFilter={group} search={search} violation={violation} />}
+        {!anaOpen && addForm !== 'bill'    && outerTab === 'bills'    && <BillsTab items={items} groupFilter={group} search={search} />}
+        {!anaOpen && outerTab === 'counts'   && <CountsTab items={items} groupFilter={group} search={search} violation={violation} />}
+        {!anaOpen && addForm !== 'expense' && outerTab === 'expenses' && <ExpensesTab search={search} />}
+        {!anaOpen && outerTab === 'cab'      && <CABTab />}
       </div>
     </div>
   )
