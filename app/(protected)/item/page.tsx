@@ -25,10 +25,10 @@ import CountsTab from './_components/CountsTab'
 import ExpensesTab from './_components/ExpensesTab'
 import CABTab from './_components/CABTab'
 import dynamic from 'next/dynamic'
-const TodayContent = dynamic(() => import('./_components/TodayContent'), {
-  ssr: false,
-  loading: () => <div className="py-10 text-center text-gray-400 text-sm">Loading…</div>,
-})
+const TodayContent    = dynamic(() => import('./_components/TodayContent'), { ssr: false, loading: () => <div className="py-10 text-center text-gray-400 text-sm">Loading…</div> })
+const NewSaleForm     = dynamic(() => import('../sales/new/page'),     { ssr: false, loading: () => <div className="py-10 text-center text-gray-400 text-sm">Loading…</div> })
+const NewBillForm     = dynamic(() => import('../bills/new/page'),     { ssr: false, loading: () => <div className="py-10 text-center text-gray-400 text-sm">Loading…</div> })
+const NewExpenseForm  = dynamic(() => import('../expenses/new/page'),  { ssr: false, loading: () => <div className="py-10 text-center text-gray-400 text-sm">Loading…</div> })
 
 type OuterTab = 'today' | 'items' | 'sales' | 'bills' | 'counts' | 'expenses' | 'cab'
 
@@ -91,6 +91,7 @@ export default function ItemHubPage() {
   const [violationOpen, setViolationOpen] = useState(false)
   const [hamburgerOpen, setHamburgerOpen] = useState(false)
   const [addOpen, setAddOpen]             = useState(false)
+  const [addForm, setAddForm]             = useState<'sale' | 'bill' | 'expense' | null>(null)
   const groupRef     = useRef<HTMLDivElement>(null)
   const violRef      = useRef<HTMLDivElement>(null)
   const hamburgerRef = useRef<HTMLDivElement>(null)
@@ -191,18 +192,13 @@ export default function ItemHubPage() {
         {/* Add sub-tab row — shown when + is active */}
         {addOpen && (
           <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 border-t border-blue-100">
-            <Link href="/sales/new" onClick={() => setAddOpen(false)}
-              className="flex-1 text-center text-xs font-semibold py-1.5 rounded-lg bg-white border border-blue-200 text-blue-700 hover:bg-blue-100 transition">
-              New Sale
-            </Link>
-            <Link href="/bills/new" onClick={() => setAddOpen(false)}
-              className="flex-1 text-center text-xs font-semibold py-1.5 rounded-lg bg-white border border-blue-200 text-blue-700 hover:bg-blue-100 transition">
-              New Bill
-            </Link>
-            <Link href="/expenses/new" onClick={() => setAddOpen(false)}
-              className="flex-1 text-center text-xs font-semibold py-1.5 rounded-lg bg-white border border-blue-200 text-blue-700 hover:bg-blue-100 transition">
-              New Expense
-            </Link>
+            {(['sale', 'bill', 'expense'] as const).map(f => (
+              <button key={f} onClick={() => setAddForm(addForm === f ? null : f)}
+                className={`flex-1 text-center text-xs font-semibold py-1.5 rounded-lg border transition
+                  ${addForm === f ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border-blue-200 text-blue-700 hover:bg-blue-100'}`}>
+                {f === 'sale' ? 'New Sale' : f === 'bill' ? 'New Bill' : 'New Expense'}
+              </button>
+            ))}
           </div>
         )}
 
@@ -280,15 +276,18 @@ export default function ItemHubPage() {
       </div>
 
       {/* ── Content ── */}
-      <div className="flex-1 min-h-0">
-        {outerTab === 'today' && (
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        {addForm === 'sale'    && <div className="px-4"><NewSaleForm    onSuccess={() => { setAddForm(null); setAddOpen(false); changeTab('sales') }} /></div>}
+        {addForm === 'bill'    && <div className="px-4"><NewBillForm    onSuccess={() => { setAddForm(null); setAddOpen(false); changeTab('bills') }} /></div>}
+        {addForm === 'expense' && <div className="px-4"><NewExpenseForm onSuccess={() => { setAddForm(null); setAddOpen(false); changeTab('expenses') }} /></div>}
+        {!addForm && outerTab === 'today' && (
           <TabErrorBoundary>
             <div className="h-full overflow-y-auto px-4">
               <TodayContent />
             </div>
           </TabErrorBoundary>
         )}
-        {outerTab === 'items' && (
+        {!addForm && outerTab === 'items' && (
           itemsLoading
             ? <div className="py-20 text-center text-gray-400 text-xs">Loading…</div>
             : <ItemsTab
@@ -300,21 +299,11 @@ export default function ItemHubPage() {
                 onItemsChanged={setItems}
               />
         )}
-        {outerTab === 'sales' && (
-          <SalesTab items={items} groupFilter={group} search={search} violation={violation} />
-        )}
-        {outerTab === 'bills' && (
-          <BillsTab items={items} groupFilter={group} search={search} />
-        )}
-        {outerTab === 'counts' && (
-          <CountsTab items={items} groupFilter={group} search={search} violation={violation} />
-        )}
-        {outerTab === 'expenses' && (
-          <ExpensesTab search={search} />
-        )}
-        {outerTab === 'cab' && (
-          <CABTab />
-        )}
+        {!addForm && outerTab === 'sales'    && <SalesTab items={items} groupFilter={group} search={search} violation={violation} />}
+        {!addForm && outerTab === 'bills'    && <BillsTab items={items} groupFilter={group} search={search} />}
+        {!addForm && outerTab === 'counts'   && <CountsTab items={items} groupFilter={group} search={search} violation={violation} />}
+        {!addForm && outerTab === 'expenses' && <ExpensesTab search={search} />}
+        {!addForm && outerTab === 'cab'      && <CABTab />}
       </div>
     </div>
   )

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 type Item = { id: number; name: string; group: string | null; soh: number; selling_price: string | number; cost_price: string | number }
 type CartLine = { item: Item; qty: number; price: number }
 
-export default function NewReceiptPage() {
+export default function NewReceiptPage({ onSuccess }: { onSuccess?: () => void } = {}) {
   const [date, setDate] = useState('')
   const [customer, setCustomer] = useState('Walk-in Customer')
   const [cashCounted, setCashCounted] = useState('')
@@ -89,7 +89,7 @@ export default function NewReceiptPage() {
     if (res.ok) {
       const d = await res.json()
       setDone(d.receiptNumber)
-      setTimeout(() => router.push('/sales'), 1500)
+      setTimeout(() => onSuccess ? onSuccess() : router.push('/sales'), 1500)
     }
   }
 

@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 
 const ACCOUNTS = ['Office Expenses','Rent','Utilities','Salaries','Transport','Repairs','Supplies','Other']
 
-export default function NewExpensePage() {
+export default function NewExpensePage({ onSuccess }: { onSuccess?: () => void } = {}) {
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [description, setDescription] = useState('')
   const [account, setAccount] = useState('Other')
@@ -23,7 +23,7 @@ export default function NewExpensePage() {
       body: JSON.stringify({ date, description, account, amount: Number(amount) }),
     })
     setSaving(false)
-    if (res.ok) { setDone(true); setTimeout(() => router.push('/dashboard'), 1200) }
+    if (res.ok) { setDone(true); setTimeout(() => onSuccess ? onSuccess() : router.push('/dashboard'), 1200) }
   }
 
   if (done) return (
