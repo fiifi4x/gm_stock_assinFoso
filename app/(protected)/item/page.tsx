@@ -63,7 +63,7 @@ function tabCls(active: boolean) {
 }
 
 export default function ItemHubPage() {
-  const [outerTab, setOuterTab] = useState<OuterTab>('today')
+  const [outerTab, setOuterTab] = useState<OuterTab>('items')
   const [group, setGroup]               = useState<string | null>(null)
   const [productType, setProductType]   = useState<'all' | 'goods' | 'services'>('all')
   const [search, setSearch]             = useState('')
