@@ -94,7 +94,6 @@ export default function ItemHubPage() {
   const groupRef     = useRef<HTMLDivElement>(null)
   const violRef      = useRef<HTMLDivElement>(null)
   const hamburgerRef = useRef<HTMLDivElement>(null)
-  const addRef       = useRef<HTMLDivElement>(null)
 
   const [items, setItems]           = useState<Item[]>([])
   const [itemsLoading, setItemsLoading] = useState(true)
@@ -114,7 +113,6 @@ export default function ItemHubPage() {
       if (groupRef.current && !groupRef.current.contains(e.target as Node)) setGroupOpen(false)
       if (violRef.current && !violRef.current.contains(e.target as Node)) setViolationOpen(false)
       if (hamburgerRef.current && !hamburgerRef.current.contains(e.target as Node)) setHamburgerOpen(false)
-      if (addRef.current && !addRef.current.contains(e.target as Node)) setAddOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -156,28 +154,13 @@ export default function ItemHubPage() {
             <button onClick={() => changeTab('cab')}      className={tabCls(outerTab === 'cab')}>CAB</button>
           </div>
 
-          {/* + Add dropdown — outside overflow-x-auto so it isn't clipped */}
-          <div className="relative shrink-0 pt-1.5 pb-1" ref={addRef}>
+          {/* + toggle — outside overflow-x-auto so it isn't clipped */}
+          <div className="shrink-0 pt-1.5 pb-1">
             <button onClick={() => setAddOpen(o => !o)}
-              className="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition font-bold text-xl leading-none">
-              +
+              className={`w-8 h-8 flex items-center justify-center rounded-lg transition font-bold text-xl leading-none
+                ${addOpen ? 'bg-blue-700 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+              {addOpen ? '×' : '+'}
             </button>
-            {addOpen && (
-              <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-[100] min-w-[150px]">
-                <Link href="/sales/new" onClick={() => setAddOpen(false)}
-                  className="block px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-t-xl transition">
-                  New Sale
-                </Link>
-                <Link href="/bills/new" onClick={() => setAddOpen(false)}
-                  className="block px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition border-t border-gray-100">
-                  New Bill
-                </Link>
-                <Link href="/expenses/new" onClick={() => setAddOpen(false)}
-                  className="block px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-b-xl transition border-t border-gray-100">
-                  New Expense
-                </Link>
-              </div>
-            )}
           </div>
 
           {/* Hamburger — outside overflow-x-auto so dropdown isn't clipped */}
@@ -204,6 +187,24 @@ export default function ItemHubPage() {
             )}
           </div>
         </div>
+
+        {/* Add sub-tab row — shown when + is active */}
+        {addOpen && (
+          <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 border-t border-blue-100">
+            <Link href="/sales/new" onClick={() => setAddOpen(false)}
+              className="flex-1 text-center text-xs font-semibold py-1.5 rounded-lg bg-white border border-blue-200 text-blue-700 hover:bg-blue-100 transition">
+              New Sale
+            </Link>
+            <Link href="/bills/new" onClick={() => setAddOpen(false)}
+              className="flex-1 text-center text-xs font-semibold py-1.5 rounded-lg bg-white border border-blue-200 text-blue-700 hover:bg-blue-100 transition">
+              New Bill
+            </Link>
+            <Link href="/expenses/new" onClick={() => setAddOpen(false)}
+              className="flex-1 text-center text-xs font-semibold py-1.5 rounded-lg bg-white border border-blue-200 text-blue-700 hover:bg-blue-100 transition">
+              New Expense
+            </Link>
+          </div>
+        )}
 
         {/* Row 2: groups + violations + search — hidden on Today tab */}
         {showControls && (
