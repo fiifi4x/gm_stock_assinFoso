@@ -1,7 +1,22 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Component, type ReactNode } from 'react'
 import Link from 'next/link'
 import { signOut } from 'next-auth/react'
+
+class TabErrorBoundary extends Component<{ children: ReactNode }, { error: boolean }> {
+  state = { error: false }
+  static getDerivedStateFromError() { return { error: true } }
+  render() {
+    if (this.state.error) return (
+      <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-400">
+        <p className="text-sm">This tab failed to load.</p>
+        <button onClick={() => this.setState({ error: false })}
+          className="text-xs text-blue-600 underline">Retry</button>
+      </div>
+    )
+    return this.props.children
+  }
+}
 import { usePolling } from '@/lib/usePolling'
 import ItemsTab from './_components/ItemsTab'
 import SalesTab from './_components/SalesTab'
@@ -122,36 +137,36 @@ export default function ItemHubPage() {
       {/* ── Header ── */}
       <div className="shrink-0 bg-white border-b border-gray-200">
 
-        {/* Row 1: outer tabs + hamburger */}
-        <div className="flex items-center gap-1 px-2 pt-1.5 pb-1 overflow-x-auto">
-          <button onClick={() => changeTab('today')}    className={tabCls(outerTab === 'today')}>Today</button>
-          <button onClick={() => changeTab('items')}    className={tabCls(outerTab === 'items')}>Items</button>
-          <button onClick={() => changeTab('sales')}    className={tabCls(outerTab === 'sales')}>Sales</button>
-          <button onClick={() => changeTab('bills')}    className={tabCls(outerTab === 'bills')}>Bills</button>
-          <button onClick={() => changeTab('counts')}   className={tabCls(outerTab === 'counts')}>Counts</button>
-          <button onClick={() => changeTab('expenses')} className={tabCls(outerTab === 'expenses')}>Exp.</button>
-          <button onClick={() => changeTab('cab')}      className={tabCls(outerTab === 'cab')}>CAB</button>
+        {/* Row 1: scrollable tabs + hamburger (hamburger outside scroll area to avoid clip) */}
+        <div className="flex items-center pr-2">
+          <div className="flex items-center gap-1 px-2 pt-1.5 pb-1 overflow-x-auto flex-1 min-w-0">
+            <button onClick={() => changeTab('today')}    className={tabCls(outerTab === 'today')}>Today</button>
+            <button onClick={() => changeTab('items')}    className={tabCls(outerTab === 'items')}>Items</button>
+            <button onClick={() => changeTab('sales')}    className={tabCls(outerTab === 'sales')}>Sales</button>
+            <button onClick={() => changeTab('bills')}    className={tabCls(outerTab === 'bills')}>Bills</button>
+            <button onClick={() => changeTab('counts')}   className={tabCls(outerTab === 'counts')}>Counts</button>
+            <button onClick={() => changeTab('expenses')} className={tabCls(outerTab === 'expenses')}>Exp.</button>
+            <button onClick={() => changeTab('cab')}      className={tabCls(outerTab === 'cab')}>CAB</button>
+          </div>
 
-          <div className="flex-1" />
-
-          {/* Hamburger */}
-          <div className="relative shrink-0" ref={hamburgerRef}>
+          {/* Hamburger — outside overflow-x-auto so dropdown isn't clipped */}
+          <div className="relative shrink-0 pt-1.5 pb-1" ref={hamburgerRef}>
             <button onClick={() => setHamburgerOpen(o => !o)}
-              className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition text-base font-bold leading-none">
-              ☰
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition font-bold text-lg leading-none">
+              &#9776;
             </button>
             {hamburgerOpen && (
-              <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 min-w-[140px]">
+              <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-[100] min-w-[150px]">
                 {hamburgerLinks.map(l => (
                   <Link key={l.href} href={l.href}
                     onClick={() => setHamburgerOpen(false)}
-                    className="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 first:rounded-t-xl transition">
+                    className="block px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 first:rounded-t-xl transition">
                     {l.label}
                   </Link>
                 ))}
                 <div className="border-t border-gray-100" />
                 <button onClick={() => signOut({ callbackUrl: '/login' })}
-                  className="w-full text-left px-4 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 last:rounded-b-xl transition">
+                  className="w-full text-left px-4 py-3 text-sm font-medium text-red-500 hover:bg-red-50 rounded-b-xl transition">
                   Sign out
                 </button>
               </div>
@@ -235,9 +250,11 @@ export default function ItemHubPage() {
       {/* ── Content ── */}
       <div className="flex-1 min-h-0">
         {outerTab === 'today' && (
-          <div className="h-full overflow-y-auto px-4">
-            <TodayContent />
-          </div>
+          <TabErrorBoundary>
+            <div className="h-full overflow-y-auto px-4">
+              <TodayContent />
+            </div>
+          </TabErrorBoundary>
         )}
         {outerTab === 'items' && (
           itemsLoading
