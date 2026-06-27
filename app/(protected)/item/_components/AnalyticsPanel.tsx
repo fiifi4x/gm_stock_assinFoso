@@ -9,11 +9,13 @@ import { usePolling } from '@/lib/usePolling'
 type AnaSection = 'Items' | 'Sales' | 'Bills' | 'Counts' | 'Expenses'
 
 const SHORT_MON = ['Ja','Fe','Mr','Ap','My','Ju','Jl','Au','Se','Oc','No','De']
-function monthLabel(k: string) {
+function monthLabel(k: string | null | undefined) {
+  if (!k) return '—'
   const [y, m] = k.split('-').map(Number)
   return `${SHORT_MON[m - 1]} ${String(y).slice(-2)}`
 }
-function dayLabel(s: string) {
+function dayLabel(s: string | null | undefined) {
+  if (!s) return '—'
   const d = new Date(s + 'T00:00:00')
   return `${d.getDate()} ${SHORT_MON[d.getMonth()]}`
 }
@@ -54,12 +56,12 @@ export default function AnalyticsPanel({ section }: { section: AnaSection }) {
   useEffect(() => { load() }, [])
   usePolling(load, 30000)
 
-  const monthlyRevenue = useMemo(() => (data?.monthlyRevenue ?? []).map((r: any) => ({ month: monthLabel(r.month), wic: n(r.wic), gmc: n(r.gmc), total: n(r.total) })), [data])
-  const dailyRevenue30 = useMemo(() => (data?.dailyRevenue30 ?? []).map((r: any) => ({ date: dayLabel(r.date), total: n(r.total) })), [data])
-  const cashDiscrepancy = useMemo(() => (data?.cashDiscrepancyTrend ?? []).map((r: any) => ({ month: monthLabel(r.month), avg: Math.round(n(r.avg_discrepancy) * 100) / 100 })), [data])
-  const monthlyBillSpend = useMemo(() => (data?.monthlyBillSpend ?? []).map((r: any) => ({ month: monthLabel(r.month), total: n(r.total) })), [data])
-  const monthlyExpenses = useMemo(() => (data?.monthlyExpenses ?? []).map((r: any) => ({ month: monthLabel(r.month), total: n(r.total) })), [data])
-  const countsPerMonth = useMemo(() => (data?.countsPerMonth ?? []).map((r: any) => ({ month: monthLabel(r.month), count: n(r.count) })), [data])
+  const monthlyRevenue = useMemo(() => (data?.monthlyRevenue ?? []).filter((r: any) => r.month).map((r: any) => ({ month: monthLabel(r.month), wic: n(r.wic), gmc: n(r.gmc), total: n(r.total) })), [data])
+  const dailyRevenue30 = useMemo(() => (data?.dailyRevenue30 ?? []).filter((r: any) => r.date).map((r: any) => ({ date: dayLabel(r.date), total: n(r.total) })), [data])
+  const cashDiscrepancy = useMemo(() => (data?.cashDiscrepancyTrend ?? []).filter((r: any) => r.month).map((r: any) => ({ month: monthLabel(r.month), avg: Math.round(n(r.avg_discrepancy) * 100) / 100 })), [data])
+  const monthlyBillSpend = useMemo(() => (data?.monthlyBillSpend ?? []).filter((r: any) => r.month).map((r: any) => ({ month: monthLabel(r.month), total: n(r.total) })), [data])
+  const monthlyExpenses = useMemo(() => (data?.monthlyExpenses ?? []).filter((r: any) => r.month).map((r: any) => ({ month: monthLabel(r.month), total: n(r.total) })), [data])
+  const countsPerMonth = useMemo(() => (data?.countsPerMonth ?? []).filter((r: any) => r.month).map((r: any) => ({ month: monthLabel(r.month), count: n(r.count) })), [data])
 
   const totalRevenue = useMemo(() => monthlyRevenue.reduce((s: number, r: any) => s + r.total, 0), [monthlyRevenue])
   const totalBills   = useMemo(() => monthlyBillSpend.reduce((s: number, r: any) => s + r.total, 0), [monthlyBillSpend])

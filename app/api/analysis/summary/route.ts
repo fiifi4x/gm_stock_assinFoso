@@ -27,6 +27,7 @@ export async function GET() {
           SUM(CASE WHEN customer_name = 'Grony Multimedia as Customer' THEN total ELSE 0 END) AS gmc,
           SUM(total) AS total
         FROM sales_receipts
+        WHERE receipt_date IS NOT NULL
         GROUP BY 1 ORDER BY 1
       `,
       sql`
@@ -46,13 +47,13 @@ export async function GET() {
         SELECT to_char(receipt_date, 'YYYY-MM') AS month,
           AVG(cash_counted - total) AS avg_discrepancy
         FROM sales_receipts
-        WHERE cash_counted IS NOT NULL
+        WHERE cash_counted IS NOT NULL AND receipt_date IS NOT NULL
         GROUP BY 1 ORDER BY 1
       `,
       // BILLS ─────────────────────────────────────────────────────────────
       sql`
         SELECT to_char(bill_date, 'YYYY-MM') AS month, SUM(total) AS total
-        FROM bills GROUP BY 1 ORDER BY 1
+        FROM bills WHERE bill_date IS NOT NULL GROUP BY 1 ORDER BY 1
       `,
       sql`
         SELECT vendor_name, SUM(total) AS total
@@ -70,7 +71,7 @@ export async function GET() {
       // EXPENSES ──────────────────────────────────────────────────────────
       sql`
         SELECT to_char(expense_date, 'YYYY-MM') AS month, SUM(amount) AS total
-        FROM expenses GROUP BY 1 ORDER BY 1
+        FROM expenses WHERE expense_date IS NOT NULL GROUP BY 1 ORDER BY 1
       `,
       sql`
         SELECT COALESCE(cf_expense_type, 'Uncategorized') AS category, SUM(amount) AS total
@@ -150,7 +151,7 @@ export async function GET() {
       // COUNTS ────────────────────────────────────────────────────────────
       sql`
         SELECT to_char(count_date, 'YYYY-MM') AS month, COUNT(*) AS count
-        FROM stock_counts GROUP BY 1 ORDER BY 1
+        FROM stock_counts WHERE count_date IS NOT NULL GROUP BY 1 ORDER BY 1
       `,
       sql`
         SELECT item_name, COUNT(*) AS times_counted
