@@ -12,10 +12,11 @@ export async function GET() {
         i.purchase_rate,
         i.units_per_pack,
         i.unit_name,
+        COALESCE(i.product_type, 'goods') AS product_type,
         COALESCE(s.calculated_soh, 0) AS calculated_soh
       FROM items i
       LEFT JOIN item_stock_summary s ON s.item_id = i.id
-      WHERE LOWER(i.status) NOT IN ('inactive', 'service')
+      WHERE LOWER(i.status) != 'inactive'
       ORDER BY i.cf_group NULLS LAST, i.canonical_name
     `
     return NextResponse.json(rows)
@@ -30,6 +31,7 @@ export async function GET() {
         i.purchase_rate,
         i.units_per_pack,
         i.unit_name,
+        'goods' AS product_type,
         COALESCE(s.calculated_soh, 0) AS calculated_soh
       FROM items i
       LEFT JOIN item_stock_summary s ON s.item_id = i.id

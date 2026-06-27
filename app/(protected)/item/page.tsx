@@ -21,6 +21,7 @@ type Item = {
   purchase_rate: string | null
   units_per_pack: string | null
   unit_name: string | null
+  product_type: string
   calculated_soh: number
 }
 
@@ -66,10 +67,11 @@ export default function ItemHubPage() {
   const role = (session?.user as any)?.role ?? 'staff'
 
   const [outerTab, setOuterTab] = useState<OuterTab>('today')
-  const [group, setGroup]         = useState<string | null>(null)
-  const [search, setSearch]       = useState('')
-  const [violation, setViolation] = useState<string | null>(null)
-  const [groupOpen, setGroupOpen]         = useState(false)
+  const [group, setGroup]               = useState<string | null>(null)
+  const [productType, setProductType]   = useState<'all' | 'goods' | 'services'>('all')
+  const [search, setSearch]             = useState('')
+  const [violation, setViolation]       = useState<string | null>(null)
+  const [groupOpen, setGroupOpen]       = useState(false)
   const [violationOpen, setViolationOpen] = useState(false)
   const [hamburgerOpen, setHamburgerOpen] = useState(false)
   const groupRef     = useRef<HTMLDivElement>(null)
@@ -102,11 +104,17 @@ export default function ItemHubPage() {
   function changeTab(t: OuterTab) {
     setOuterTab(t)
     setViolation(null)
+    if (t !== 'items') setProductType('all')
   }
 
   const groups = ['All', ...Array.from(new Set(items.map(i => i.cf_group ?? 'Ungrouped'))).sort()]
   const currentViolations = VIOLATIONS[outerTab]
   const activeViolationLabel = currentViolations.find(v => v.key === violation)?.label ?? null
+
+  const groupLabel = [
+    group ?? 'All',
+    productType !== 'all' ? (productType === 'goods' ? 'Goods' : 'Services') : null,
+  ].filter(Boolean).join(' · ')
 
   const showControls = outerTab !== 'today'
   const hamburgerLinks = HAMBURGER_LINKS.filter(l => l.roles.includes(role))
@@ -162,11 +170,11 @@ export default function ItemHubPage() {
             <div className="relative shrink-0" ref={groupRef}>
               <button onClick={() => setGroupOpen(o => !o)}
                 className={`text-xs font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap flex items-center gap-1 transition
-                  ${group ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-                {group ?? 'All'} <span className="text-[10px]">▾</span>
+                  ${(group || productType !== 'all') ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                {groupLabel} <span className="text-[10px]">▾</span>
               </button>
               {groupOpen && (
-                <div className="absolute top-full left-0 mt-0.5 bg-white border border-gray-200 rounded-lg shadow-lg z-30 min-w-[130px] max-h-52 overflow-y-auto">
+                <div className="absolute top-full left-0 mt-0.5 bg-white border border-gray-200 rounded-lg shadow-lg z-30 min-w-[140px] max-h-64 overflow-y-auto">
                   {groups.map(g => (
                     <button key={g} onClick={() => { setGroup(g === 'All' ? null : g); setGroupOpen(false) }}
                       className={`w-full text-left px-3 py-1.5 text-xs hover:bg-blue-50 transition
@@ -174,6 +182,16 @@ export default function ItemHubPage() {
                       {g}
                     </button>
                   ))}
+                  <div className="border-t border-gray-100 mt-0.5 pt-0.5">
+                    <p className="px-3 py-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Type</p>
+                    {(['all', 'goods', 'services'] as const).map(t => (
+                      <button key={t} onClick={() => { setProductType(t); setGroupOpen(false) }}
+                        className={`w-full text-left px-3 py-1.5 text-xs hover:bg-blue-50 transition capitalize
+                          ${productType === t ? 'text-blue-600 font-semibold' : 'text-gray-700'}`}>
+                        {t === 'all' ? 'All Types' : t.charAt(0).toUpperCase() + t.slice(1)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -230,6 +248,7 @@ export default function ItemHubPage() {
             : <ItemsTab
                 items={items}
                 group={group}
+                productType={productType}
                 search={search}
                 violation={violation}
                 onItemsChanged={setItems}

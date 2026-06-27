@@ -11,6 +11,7 @@ type Item = {
   purchase_rate: string | null
   units_per_pack: string | null
   unit_name: string | null
+  product_type: string
   calculated_soh: number
 }
 
@@ -249,12 +250,13 @@ function ItemForm({ form, onChange, groups }: { form: typeof EMPTY_FORM; onChang
 type Props = {
   items: Item[]
   group: string | null
+  productType: 'all' | 'goods' | 'services'
   search: string
   violation: string | null
   onItemsChanged: (items: Item[]) => void
 }
 
-export default function ItemsTab({ items, group, search, violation, onItemsChanged }: Props) {
+export default function ItemsTab({ items, group, productType, search, violation, onItemsChanged }: Props) {
   const [lossMap, setLossMap] = useState<Record<number, DayRow[]>>({})
   const [lossLoading, setLossLoading] = useState(true)
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -322,13 +324,16 @@ export default function ItemsTab({ items, group, search, violation, onItemsChang
     const q = search.toLowerCase()
     let list = items.filter(i => {
       const matchGroup = !group || group === 'All' ? true : (i.cf_group ?? 'Ungrouped') === group
-      return matchGroup && i.item_name.toLowerCase().includes(q)
+      const matchType = productType === 'all' ? true
+        : productType === 'services' ? i.product_type === 'services'
+        : i.product_type !== 'services'
+      return matchGroup && matchType && i.item_name.toLowerCase().includes(q)
     })
     if (violation === 'neg_soh') list = list.filter(i => Number(i.calculated_soh) <= 0)
     if (violation === 'no_sp') list = list.filter(i => !i.selling_rate || parseFloat(i.selling_rate) === 0)
     if (violation === 'no_cp') list = list.filter(i => !i.purchase_rate || parseFloat(i.purchase_rate) === 0)
     return list
-  }, [items, group, search, violation])
+  }, [items, group, productType, search, violation])
 
   const activeDups = flags ? flags.duplicates.filter((r: any) => {
     const lo = Math.min(r.id1, r.id2), hi = Math.max(r.id1, r.id2)
