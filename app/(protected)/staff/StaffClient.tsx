@@ -1533,14 +1533,14 @@ function AssignmentsTab({ role }: { role: string }) {
 
 // ── MAIN ──────────────────────────────────────────────────────────────────────
 
-function StaffClientInner({ role, username }: { role: string; username: string }) {
+function StaffClientInner({ role, username, embedded }: { role: string; username: string; embedded?: boolean }) {
   const searchParams = useSearchParams()
   const initialTab = searchParams.get('tab')
   const [tab, setTab] = useState<Tab>(TABS.includes(initialTab as Tab) ? (initialTab as Tab) : 'Times')
 
   return (
     <div className="py-4 space-y-4">
-      <h1 className="text-xl font-bold text-gray-900">Staff</h1>
+      {!embedded && <h1 className="text-xl font-bold text-gray-900">Staff</h1>}
 
       <div className="flex gap-1 overflow-x-auto pb-1">
         {TABS.map(t => (
@@ -1564,10 +1564,10 @@ function StaffClientInner({ role, username }: { role: string; username: string }
   )
 }
 
-export default function StaffClient({ role, username }: { role: string; username: string }) {
+export default function StaffClient({ role, username, embedded }: { role: string; username: string; embedded?: boolean }) {
   return (
     <Suspense fallback={<div className="py-10 text-center text-gray-400">Loading…</div>}>
-      <StaffClientInner role={role} username={username} />
+      <StaffClientInner role={role} username={username} embedded={embedded} />
     </Suspense>
   )
 }

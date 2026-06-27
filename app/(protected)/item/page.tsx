@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef, Component, type ReactNode } from 'react'
 import Link from 'next/link'
-import { signOut } from 'next-auth/react'
+import { signOut, useSession } from 'next-auth/react'
 
 class TabErrorBoundary extends Component<{ children: ReactNode }, { error: boolean; message: string }> {
   state = { error: false, message: '' }
@@ -34,6 +34,7 @@ const NewSaleForm     = dynamic(() => import('../sales/new/page'),     { ssr: fa
 const NewBillForm     = dynamic(() => import('../bills/new/page'),     { ssr: false, loading: () => <div className="py-10 text-center text-gray-400 text-sm">Loading…</div> })
 const NewExpenseForm  = dynamic(() => import('../expenses/new/page'),  { ssr: false, loading: () => <div className="py-10 text-center text-gray-400 text-sm">Loading…</div> })
 const AnalyticsPanel  = dynamic(() => import('./_components/AnalyticsPanel'), { ssr: false, loading: () => <div className="py-10 text-center text-gray-400 text-xs">Loading analytics…</div> })
+const StaffClient     = dynamic(() => import('../staff/StaffClient'), { ssr: false, loading: () => <div className="py-10 text-center text-gray-400 text-sm">Loading…</div> })
 
 // Defined locally (not imported from AnalyticsPanel.tsx) -- a cross-file type
 // import here previously caused the analytics/recharts bundle to get pulled
@@ -43,7 +44,7 @@ const ANA_SECTION: Partial<Record<OuterTab, AnaSection>> = {
   items: 'Items', sales: 'Sales', bills: 'Bills', counts: 'Counts', expenses: 'Expenses',
 }
 
-type OuterTab = 'today' | 'items' | 'sales' | 'bills' | 'counts' | 'expenses' | 'cab'
+type OuterTab = 'today' | 'items' | 'sales' | 'bills' | 'counts' | 'expenses' | 'cab' | 'staff'
 
 type Item = {
   id: number
@@ -78,12 +79,12 @@ const VIOLATIONS: Record<OuterTab, { key: string; label: string }[]> = {
   ],
   expenses: [],
   cab: [],
+  staff: [],
 }
 
 const HAMBURGER_LINKS = [
   { href: '/aliases',  label: 'Aliases'  },
   { href: '/analysis', label: 'Analysis' },
-  { href: '/staff',    label: 'Staff'    },
   { href: '/logs',     label: 'Logs'     },
   { href: '/users',    label: 'Users'    },
   { href: '/profile',  label: 'Profile'  },
@@ -151,7 +152,10 @@ export default function ItemHubPage() {
     productType !== 'all' ? (productType === 'goods' ? 'Goods' : 'Services') : null,
   ].filter(Boolean).join(' · ')
 
-  const showControls = outerTab !== 'today'
+  const showControls = outerTab !== 'today' && outerTab !== 'staff'
+  const { data: session } = useSession()
+  const role = (session?.user as any)?.role ?? 'staff'
+  const username = (session?.user as any)?.username ?? session?.user?.name ?? ''
   const hamburgerLinks = HAMBURGER_LINKS
 
   return (
@@ -169,6 +173,7 @@ export default function ItemHubPage() {
             <button onClick={() => changeTab('counts')}   className={tabCls(outerTab === 'counts')}>Counts</button>
             <button onClick={() => changeTab('expenses')} className={tabCls(outerTab === 'expenses')}>Exp.</button>
             <button onClick={() => changeTab('cab')}      className={tabCls(outerTab === 'cab')}>CAB</button>
+            <button onClick={() => changeTab('staff')}    className={tabCls(outerTab === 'staff')}>👤 Staff</button>
           </div>
 
           {/* Hamburger — outside overflow-x-auto so dropdown isn't clipped */}
@@ -340,6 +345,11 @@ export default function ItemHubPage() {
         {!anaOpen && outerTab === 'counts'   && <CountsTab items={items} groupFilter={group} search={search} violation={violation} />}
         {!anaOpen && addForm !== 'expense' && outerTab === 'expenses' && <ExpensesTab search={search} />}
         {!anaOpen && outerTab === 'cab'      && <CABTab />}
+        {!anaOpen && outerTab === 'staff'    && (
+          <TabErrorBoundary>
+            <StaffClient role={role} username={username} embedded />
+          </TabErrorBoundary>
+        )}
       </div>
     </div>
   )
