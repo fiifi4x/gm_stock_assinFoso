@@ -51,7 +51,7 @@ export default function ActivityToaster() {
   if (!toasts.length) return null
 
   return (
-    <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[300] flex flex-col gap-2 w-[92%] max-w-sm px-2">
+    <div className="fixed bottom-36 md:bottom-16 left-1/2 -translate-x-1/2 z-[300] flex flex-col gap-2 w-[92%] max-w-sm px-2">
       {toasts.map(t => (
         <div key={t.id}
           onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))}
