@@ -767,11 +767,33 @@ function PayslipsTab() {
 
 // ── VIOLATIONS TAB ────────────────────────────────────────────────────────────
 
+const VIOLATION_VIEWS = ['Disciplinary', 'Payslips', 'Times'] as const
+type ViolationView = (typeof VIOLATION_VIEWS)[number]
+
+const VIOLATION_ICONS: Record<ViolationView, React.ReactNode> = {
+  Disciplinary: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+    </svg>
+  ),
+  Payslips: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+    </svg>
+  ),
+  Times: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+    </svg>
+  ),
+}
+
 function ViolationsTab({ role, username }: { role: string; username: string }) {
   const isAdmin = role === 'owner' || role === 'admin' || username === 'rawlings' || username === 'grony'
   const PAYSLIP_MONTHS = ['2026-04', '2026-05']
   const PAYSLIP_MONTH_LABELS: Record<string, string> = { '2026-04': 'April 2026', '2026-05': 'May 2026' }
 
+  const [vview, setVview] = useState<ViolationView>('Disciplinary')
   const [violations, setViolations] = useState<Violation[]>([])
   const [noTimesDays, setNoTimesDays] = useState<string[]>([])
   const [missingPayslips, setMissingPayslips] = useState<{ staff: string; month: string }[]>([])
@@ -789,7 +811,6 @@ function ViolationsTab({ role, username }: { role: string; username: string }) {
     ]).then(([v, flags, payslips]) => {
       setViolations(Array.isArray(v) ? v : [])
       setNoTimesDays((flags?.noStaffTimes ?? []).map((r: any) => r.missing_date))
-      // Find staff + month combos where payslip is missing
       const existing = new Set(
         (Array.isArray(payslips) ? payslips : []).map((p: any) => `${p.staff_name}|${p.pay_month?.slice(0, 7)}`)
       )
@@ -837,190 +858,211 @@ function ViolationsTab({ role, username }: { role: string; username: string }) {
     return STAFF.map(s => ({ staff: s, points: totals[s] ?? 0 })).sort((a, b) => b.points - a.points)
   }, [violations])
 
+  const vviewCounts: Record<ViolationView, number> = {
+    Disciplinary: violations.length,
+    Payslips: missingPayslips.length,
+    Times: noTimesDays.length,
+  }
+
   if (loading) return <div className="py-10 text-center text-gray-400">Loading…</div>
 
   return (
     <div className="space-y-4">
-      <div className="bg-white border border-gray-200 rounded-xl p-3">
-        <p className="text-xs font-semibold text-gray-500 mb-2">Penalty Points Leaderboard</p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {leaderboard.map(l => (
-            <div key={l.staff} className="bg-gray-50 rounded-lg px-3 py-2">
-              <p className="text-[10px] text-gray-400 capitalize">{l.staff}</p>
-              <p className={`text-base font-bold ${l.points > 0 ? 'text-red-500' : 'text-gray-700'}`}>{l.points}</p>
-            </div>
-          ))}
-        </div>
+      {/* ── sub-menu row ── */}
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {VIOLATION_VIEWS.map(v => {
+          const count = vviewCounts[v]
+          const active = vview === v
+          return (
+            <button key={v} onClick={() => setVview(v)} title={`${count} ${v.toLowerCase()}`}
+              className={`relative shrink-0 flex flex-col items-center gap-0.5 px-4 py-2 rounded-xl text-[10px] font-semibold transition
+                ${active ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+              {VIOLATION_ICONS[v]}
+              {v}
+              {count > 0 && (
+                <span className={`absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full text-[9px] font-bold flex items-center justify-center
+                  ${active ? 'bg-white text-red-600' : 'bg-red-500 text-white'}`}>
+                  {count}
+                </span>
+              )}
+            </button>
+          )
+        })}
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="flex gap-1.5 overflow-x-auto pb-1">
-          {['All', ...STAFF].map(s => (
-            <button key={s} onClick={() => setStaffFilter(s)}
-              className={`shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium capitalize transition
-                ${staffFilter === s ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-              {s}
-            </button>
-          ))}
-        </div>
-        {canManage && (
-          <button onClick={() => setShowForm(v => !v)}
-            className="shrink-0 ml-2 bg-red-500 hover:bg-red-400 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition">
-            + Record
-          </button>
-        )}
-      </div>
+      {/* ── Disciplinary ── */}
+      {vview === 'Disciplinary' && (
+        <div className="space-y-4">
+          <div className="bg-white border border-gray-200 rounded-xl p-3">
+            <p className="text-xs font-semibold text-gray-500 mb-2">Penalty Points Leaderboard</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {leaderboard.map(l => (
+                <div key={l.staff} className="bg-gray-50 rounded-lg px-3 py-2">
+                  <p className="text-[10px] text-gray-400 capitalize">{l.staff}</p>
+                  <p className={`text-base font-bold ${l.points > 0 ? 'text-red-500' : 'text-gray-700'}`}>{l.points}</p>
+                </div>
+              ))}
+            </div>
+          </div>
 
-      {showForm && canManage && (
-        <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
-          <p className="text-sm font-semibold text-gray-700">Record Violation</p>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Staff Member</label>
-              <select value={form.staff_name} onChange={e => setForm(f => ({ ...f, staff_name: e.target.value }))} className={inputCls}>
-                {STAFF.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
-              </select>
+          <div className="flex items-center justify-between">
+            <div className="flex gap-1.5 overflow-x-auto pb-1">
+              {['All', ...STAFF].map(s => (
+                <button key={s} onClick={() => setStaffFilter(s)}
+                  className={`shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium capitalize transition
+                    ${staffFilter === s ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                  {s}
+                </button>
+              ))}
             </div>
-            <div>
-              <label className={labelCls}>Severity</label>
-              <select value={form.severity} onChange={e => setForm(f => ({ ...f, severity: e.target.value }))} className={inputCls}>
-                <option value="minor">Minor</option>
-                <option value="moderate">Moderate</option>
-                <option value="serious">Serious</option>
-              </select>
+            {canManage && (
+              <button onClick={() => setShowForm(v => !v)}
+                className="shrink-0 ml-2 bg-red-500 hover:bg-red-400 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition">
+                + Record
+              </button>
+            )}
+          </div>
+
+          {showForm && canManage && (
+            <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+              <p className="text-sm font-semibold text-gray-700">Record Violation</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>Staff Member</label>
+                  <select value={form.staff_name} onChange={e => setForm(f => ({ ...f, staff_name: e.target.value }))} className={inputCls}>
+                    {STAFF.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>Severity</label>
+                  <select value={form.severity} onChange={e => setForm(f => ({ ...f, severity: e.target.value }))} className={inputCls}>
+                    <option value="minor">Minor</option>
+                    <option value="moderate">Moderate</option>
+                    <option value="serious">Serious</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>Points</label>
+                  <input type="number" min="0" value={form.points}
+                    onChange={e => setForm(f => ({ ...f, points: e.target.value }))} className={inputCls} />
+                </div>
+              </div>
+              <div>
+                <label className={labelCls}>Violation</label>
+                <input value={form.violation} onChange={e => setForm(f => ({ ...f, violation: e.target.value }))}
+                  placeholder="e.g. Late arrival, Insubordination…" className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Details (optional)</label>
+                <textarea value={form.details} onChange={e => setForm(f => ({ ...f, details: e.target.value }))}
+                  rows={2} placeholder="Additional context…"
+                  className="w-full bg-gray-100 border border-gray-200 rounded-xl px-3 py-2.5 text-base text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-400 resize-none" />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={submit} disabled={!form.violation.trim() || saving}
+                  className="flex-1 bg-red-500 hover:bg-red-400 disabled:opacity-40 text-white text-sm font-semibold rounded-xl py-2.5 transition">
+                  {saving ? 'Saving…' : 'Save Violation'}
+                </button>
+                <button onClick={() => setShowForm(false)} className="px-4 py-2.5 bg-gray-100 text-gray-600 text-sm font-semibold rounded-xl">Cancel</button>
+              </div>
             </div>
-            <div>
-              <label className={labelCls}>Points</label>
-              <input type="number" min="0" value={form.points}
-                onChange={e => setForm(f => ({ ...f, points: e.target.value }))} className={inputCls} />
-            </div>
-          </div>
-          <div>
-            <label className={labelCls}>Violation</label>
-            <input value={form.violation} onChange={e => setForm(f => ({ ...f, violation: e.target.value }))}
-              placeholder="e.g. Late arrival, Insubordination…" className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>Details (optional)</label>
-            <textarea value={form.details} onChange={e => setForm(f => ({ ...f, details: e.target.value }))}
-              rows={2} placeholder="Additional context…"
-              className="w-full bg-gray-100 border border-gray-200 rounded-xl px-3 py-2.5 text-base text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-400 resize-none" />
-          </div>
-          <div className="flex gap-2">
-            <button onClick={submit} disabled={!form.violation.trim() || saving}
-              className="flex-1 bg-red-500 hover:bg-red-400 disabled:opacity-40 text-white text-sm font-semibold rounded-xl py-2.5 transition">
-              {saving ? 'Saving…' : 'Save Violation'}
-            </button>
-            <button onClick={() => setShowForm(false)} className="px-4 py-2.5 bg-gray-100 text-gray-600 text-sm font-semibold rounded-xl">Cancel</button>
-          </div>
+          )}
+
+          {filtered.length === 0
+            ? <p className="py-10 text-center text-gray-400 text-sm">No violations recorded.</p>
+            : filtered.map(v => (
+              <div key={v.id} className="bg-white border border-gray-200 rounded-xl p-3 space-y-1">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STAFF_COLORS[v.staff_name.charAt(0).toUpperCase() + v.staff_name.slice(1)] ?? 'bg-gray-100 text-gray-600'}`}>
+                      {v.staff_name}
+                    </span>
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${SEVERITY_COLORS[v.severity] ?? 'bg-gray-100 text-gray-500'}`}>
+                      {v.severity}
+                    </span>
+                    {v.points > 0 && (
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-600">
+                        -{v.points} pts
+                      </span>
+                    )}
+                  </div>
+                  {role === 'owner' && (
+                    <button onClick={() => remove(v.id)} className="text-xs text-red-400 hover:text-red-600 font-semibold shrink-0">Delete</button>
+                  )}
+                </div>
+                <p className="text-sm font-semibold text-gray-900">{v.violation}</p>
+                {v.details && <p className="text-xs text-gray-500">{v.details}</p>}
+                <p className="text-xs text-gray-400">
+                  {fmtDate(v.created_at)}{v.recorded_by ? ` · ${v.recorded_by}` : ''}
+                </p>
+              </div>
+            ))
+          }
         </div>
       )}
 
-      {filtered.length === 0
-        ? <p className="py-10 text-center text-gray-400 text-sm">No violations recorded.</p>
-        : filtered.map(v => (
-          <div key={v.id} className="bg-white border border-gray-200 rounded-xl p-3 space-y-1">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STAFF_COLORS[v.staff_name.charAt(0).toUpperCase() + v.staff_name.slice(1)] ?? 'bg-gray-100 text-gray-600'}`}>
-                  {v.staff_name}
-                </span>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${SEVERITY_COLORS[v.severity] ?? 'bg-gray-100 text-gray-500'}`}>
-                  {v.severity}
-                </span>
-                {v.points > 0 && (
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-600">
-                    -{v.points} pts
-                  </span>
-                )}
-              </div>
-              {role === 'owner' && (
-                <button onClick={() => remove(v.id)} className="text-xs text-red-400 hover:text-red-600 font-semibold shrink-0">Delete</button>
-              )}
-            </div>
-            <p className="text-sm font-semibold text-gray-900">{v.violation}</p>
-            {v.details && <p className="text-xs text-gray-500">{v.details}</p>}
-            <p className="text-xs text-gray-400">
-              {fmtDate(v.created_at)}{v.recorded_by ? ` · ${v.recorded_by}` : ''}
-            </p>
-          </div>
-        ))
-      }
-
       {/* ── Missing Payslips ── */}
-      <div className="border-t border-gray-200 pt-4">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-sm font-semibold text-gray-700">Missing Payslips</p>
-          {missingPayslips.length > 0 && (
-            <span className="text-[10px] font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
-              {missingPayslips.length} missing
-            </span>
+      {vview === 'Payslips' && (
+        <div className="space-y-3">
+          <p className="text-[11px] text-gray-400">
+            Joe must provide payslips for all staff for April 2026 and May 2026.
+          </p>
+          {missingPayslips.length === 0 ? (
+            <p className="py-10 text-center text-gray-400 text-sm">All payslips are in. ✓</p>
+          ) : (
+            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100">
+              {PAYSLIP_MONTHS.map(month => {
+                const staffMissing = missingPayslips.filter(p => p.month === month).map(p => p.staff)
+                if (staffMissing.length === 0) return (
+                  <div key={month} className="flex items-center justify-between px-4 py-3">
+                    <span className="text-sm font-semibold text-gray-700">{PAYSLIP_MONTH_LABELS[month]}</span>
+                    <span className="text-xs text-green-600 font-semibold">Complete ✓</span>
+                  </div>
+                )
+                return (
+                  <div key={month} className="px-4 py-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-gray-700">{PAYSLIP_MONTH_LABELS[month]}</span>
+                      <span className="text-[10px] text-orange-600 font-semibold">{staffMissing.length} missing</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {staffMissing.map(s => (
+                        <span key={s} className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STAFF_COLORS[s.charAt(0).toUpperCase()+s.slice(1)] ?? 'bg-gray-100 text-gray-600'}`}>
+                          {s.charAt(0).toUpperCase()+s.slice(1)}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-[11px] text-gray-400">Assigned to: <span className="font-semibold text-blue-600">Joe</span></p>
+                  </div>
+                )
+              })}
+            </div>
           )}
         </div>
-        <p className="text-[11px] text-gray-400 mb-3">
-          Joe must provide payslips for all staff for April 2026 and May 2026.
-        </p>
-        {missingPayslips.length === 0 ? (
-          <p className="py-4 text-center text-gray-400 text-xs">All payslips are in. ✓</p>
-        ) : (
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100">
-            {PAYSLIP_MONTHS.map(month => {
-              const staffMissing = missingPayslips.filter(p => p.month === month).map(p => p.staff)
-              if (staffMissing.length === 0) return (
-                <div key={month} className="flex items-center justify-between px-4 py-3">
-                  <span className="text-sm font-semibold text-gray-700">{PAYSLIP_MONTH_LABELS[month]}</span>
-                  <span className="text-xs text-green-600 font-semibold">Complete ✓</span>
-                </div>
-              )
-              return (
-                <div key={month} className="px-4 py-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-gray-700">{PAYSLIP_MONTH_LABELS[month]}</span>
-                    <span className="text-[10px] text-orange-600 font-semibold">{staffMissing.length} missing</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {staffMissing.map(s => (
-                      <span key={s} className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STAFF_COLORS[s.charAt(0).toUpperCase()+s.slice(1)] ?? 'bg-gray-100 text-gray-600'}`}>
-                        {s.charAt(0).toUpperCase()+s.slice(1)}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="text-[11px] text-gray-400">Assigned to: <span className="font-semibold text-blue-600">Joe</span></p>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
+      )}
 
       {/* ── Missing Staff Times ── */}
-      <div className="border-t border-gray-200 pt-4">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-sm font-semibold text-gray-700">Missing Staff Times</p>
-          {noTimesDays.length > 0 && (
-            <span className="text-[10px] font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
-              {noTimesDays.length} day{noTimesDays.length !== 1 ? 's' : ''}
-            </span>
-          )}
+      {vview === 'Times' && (
+        <div className="space-y-3">
+          <p className="text-[11px] text-gray-400">Days that have a sales receipt but no staff time was entered.</p>
+          {noTimesDays.length === 0
+            ? <p className="py-10 text-center text-gray-400 text-sm">All sales days have staff times recorded.</p>
+            : (
+              <div className="bg-white border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100">
+                {noTimesDays.map(date => (
+                  <FixRow key={date} label={fmtDate(date)} sub="No staff times recorded">
+                    {isAdmin ? (
+                      <NoTimesFix date={date} onFixed={d => setNoTimesDays(prev => prev.filter(x => x !== d))} />
+                    ) : (
+                      <p className="text-xs text-gray-400 py-1">Only Rawlings or the owner can add times.</p>
+                    )}
+                  </FixRow>
+                ))}
+              </div>
+            )
+          }
         </div>
-        <p className="text-[11px] text-gray-400 mb-3">Days that have a sales receipt but no staff time was entered.</p>
-        {noTimesDays.length === 0
-          ? <p className="py-4 text-center text-gray-400 text-xs">All sales days have staff times recorded.</p>
-          : (
-            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100">
-              {noTimesDays.map(date => (
-                <FixRow key={date} label={fmtDate(date)} sub="No staff times recorded">
-                  {isAdmin ? (
-                    <NoTimesFix date={date} onFixed={d => setNoTimesDays(prev => prev.filter(x => x !== d))} />
-                  ) : (
-                    <p className="text-xs text-gray-400 py-1">Only Rawlings or the owner can add times.</p>
-                  )}
-                </FixRow>
-              ))}
-            </div>
-          )
-        }
-      </div>
+      )}
     </div>
   )
 }
