@@ -270,6 +270,10 @@ export default function ItemsTab({ items, group, productType, search, violation,
   const [addForm, setAddForm] = useState(EMPTY_FORM)
   const [adding, setAdding] = useState(false)
   usePresenceReporter(showAdd ? 'adding an item' : editingId != null ? 'editing an item' : null)
+  const leftPaneRef = useRef<HTMLDivElement>(null)
+  const rightPaneRef = useRef<HTMLDivElement>(null)
+  const scrollingFromClick = useRef(false)
+  const selectedIdRef = useRef<number | null>(null)
   const [flags, setFlags] = useState<any | null>(null)
   const [flagsLoading, setFlagsLoading] = useState(false)
   const [nameRes, setNameRes] = useState<NameRes | null>(null)
@@ -455,13 +459,6 @@ export default function ItemsTab({ items, group, productType, search, violation,
     )
   }
 
-  if (lossLoading) return <div className="py-20 text-center text-gray-400 text-xs">Loading…</div>
-
-  const leftPaneRef = useRef<HTMLDivElement>(null)
-  const rightPaneRef = useRef<HTMLDivElement>(null)
-  const scrollingFromClick = useRef(false)
-  const selectedIdRef = useRef<number | null>(null)
-
   useEffect(() => {
     const rightPane = rightPaneRef.current
     if (!rightPane) return
@@ -491,6 +488,8 @@ export default function ItemsTab({ items, group, productType, search, violation,
     rightPane.addEventListener('scroll', onScroll, { passive: true })
     return () => rightPane.removeEventListener('scroll', onScroll)
   }, [filteredItems])
+
+  if (lossLoading) return <div className="py-20 text-center text-gray-400 text-xs">Loading…</div>
 
   return (
     <div className="flex h-full min-h-0">
