@@ -117,7 +117,7 @@ function minsToHrs(mins: number) {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type RecentRow = { staff_name: string; work_date: string; actual_in: string | null; actual_out: string | null; entered_by: string | null }
+type RecentRow = { id?: number; staff_name: string; work_date: string; actual_in: string | null; actual_out: string | null; entered_by: string | null }
 type TodayRow = { staff_name: string; actual_in: string | null; actual_out: string | null }
 type Mine = { actual_in: string | null; actual_out: string | null } | null
 
@@ -146,35 +146,85 @@ function groupByDate(rows: RecentRow[]) {
   return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]))
 }
 
-function TimesTab({ username }: { username: string }) {
+function TimesTab({ username, role }: { username: string; role: string }) {
+  const isAdmin = role === 'owner' || role === 'admin' || username === 'rawlings' || username === 'grony'
+
   const [today, setToday] = useState<TodayRow[]>([])
   const [mine, setMine] = useState<Mine>(null)
   const [recent, setRecent] = useState<RecentRow[]>([])
+  const [allRecords, setAllRecords] = useState<RecentRow[]>([])
   const [loading, setLoading] = useState(true)
   const [pickingTime, setPickingTime] = useState(false)
   const [customTime, setCustomTime] = useState(nowAsHHMM())
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
+  const [showManage, setShowManage] = useState(false)
 
   const [editDate, setEditDate] = useState<string | null>(null)
   const [editIn, setEditIn] = useState('')
   const [editOut, setEditOut] = useState('')
   const [savingEdit, setSavingEdit] = useState(false)
 
+  // Admin edit/add/delete state
+  const [adminEditRow, setAdminEditRow] = useState<RecentRow | null>(null)
+  const [adminEditIn, setAdminEditIn] = useState('')
+  const [adminEditOut, setAdminEditOut] = useState('')
+  const [adminEditSaving, setAdminEditSaving] = useState(false)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [addStaff, setAddStaff] = useState(STAFF[0])
+  const [addDate, setAddDate] = useState('')
+  const [addIn, setAddIn] = useState('')
+  const [addOut, setAddOut] = useState('')
+  const [addSaving, setAddSaving] = useState(false)
+  const [addErr, setAddErr] = useState('')
+
   function load() {
-    fetch('/api/staff-times/today')
-      .then(r => r.json())
-      .then(d => {
-        setToday(Array.isArray(d.today) ? d.today : [])
-        setMine(d.mine ?? null)
-        setRecent(Array.isArray(d.recent) ? d.recent : [])
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
+    const p1 = fetch('/api/staff-times/today').then(r => r.json())
+    const p2 = isAdmin ? fetch('/api/staff-times/all').then(r => r.json()) : Promise.resolve([])
+    Promise.all([p1, p2]).then(([d, all]) => {
+      setToday(Array.isArray(d.today) ? d.today : [])
+      setMine(d.mine ?? null)
+      setRecent(Array.isArray(d.recent) ? d.recent : [])
+      if (isAdmin) setAllRecords(Array.isArray(all) ? all : [])
+      setLoading(false)
+    }).catch(() => setLoading(false))
   }
 
   useEffect(() => { load() }, [])
-  usePolling(load, 5000, !pickingTime && editDate === null)
+  usePolling(load, 5000, !pickingTime && editDate === null && !showManage)
+
+  async function adminSaveEdit() {
+    if (!adminEditRow?.id) return
+    setAdminEditSaving(true)
+    const res = await fetch(`/api/staff-times/entry-id/${adminEditRow.id}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actual_in: adminEditIn || null, actual_out: adminEditOut || null }),
+    })
+    setAdminEditSaving(false)
+    if (res.ok) {
+      const updated = await res.json()
+      setAllRecords(prev => prev.map(r => r.id === updated.id ? { ...r, ...updated } : r))
+      setAdminEditRow(null)
+    }
+  }
+
+  async function adminDelete(row: RecentRow) {
+    if (!row.id || !confirm(`Delete time entry for ${row.staff_name} on ${row.work_date}?`)) return
+    await fetch(`/api/staff-times/entry-id/${row.id}`, { method: 'DELETE' })
+    setAllRecords(prev => prev.filter(r => r.id !== row.id))
+  }
+
+  async function adminAdd() {
+    if (!addDate || !addIn) { setAddErr('Date and Time In are required'); return }
+    setAddSaving(true); setAddErr('')
+    const res = await fetch('/api/staff-times/entry', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ staff_name: addStaff, work_date: addDate, actual_in: addIn, actual_out: addOut || null }),
+    })
+    setAddSaving(false)
+    if (res.ok) { setShowAddForm(false); setAddIn(''); setAddOut(''); setAddDate(''); load() }
+    else { const d = await res.json(); setAddErr(d.error ?? 'Failed to save') }
+  }
 
   function getLocation(): Promise<GeolocationPosition> {
     return new Promise((resolve, reject) => {
@@ -257,8 +307,128 @@ function TimesTab({ username }: { username: string }) {
 
   if (loading) return <div className="py-10 text-center text-gray-400">Loading…</div>
 
+  // Admin manage view
+  if (showManage) return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <button onClick={() => setShowManage(false)}
+          className="text-sm font-semibold px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
+          ← Back
+        </button>
+        <button onClick={() => setShowAddForm(v => !v)}
+          className="text-sm font-bold px-3 py-1.5 rounded-xl bg-blue-600 text-white hover:bg-blue-500 transition">
+          {showAddForm ? 'Cancel' : '+ Add Entry'}
+        </button>
+      </div>
+
+      {showAddForm && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
+          <p className="text-sm font-semibold text-blue-700">New Time Entry</p>
+          {addErr && <p className="text-xs text-red-500">{addErr}</p>}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className={labelCls}>Staff</label>
+              <select value={addStaff} onChange={e => setAddStaff(e.target.value)} className={inputCls}>
+                {STAFF.map(s => <option key={s} value={s} className="capitalize">{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Date</label>
+              <input type="date" value={addDate} onChange={e => setAddDate(e.target.value)} className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Time In (e.g. 8:30am)</label>
+              <input placeholder="8:30am" value={addIn} onChange={e => setAddIn(e.target.value)} className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Time Out (optional)</label>
+              <input placeholder="5:00pm" value={addOut} onChange={e => setAddOut(e.target.value)} className={inputCls} />
+            </div>
+          </div>
+          <button onClick={adminAdd} disabled={addSaving}
+            className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl py-2.5 transition">
+            {addSaving ? 'Saving…' : 'Save Entry'}
+          </button>
+        </div>
+      )}
+
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <table className="w-full text-xs">
+          <thead className="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th className="text-left px-3 py-2 text-gray-500 font-semibold">Date</th>
+              <th className="text-left px-3 py-2 text-gray-500 font-semibold">Staff</th>
+              <th className="text-center px-2 py-2 text-green-600 font-semibold">In</th>
+              <th className="text-center px-2 py-2 text-orange-500 font-semibold">Out</th>
+              <th className="text-left px-2 py-2 text-gray-400 font-semibold">By</th>
+              <th className="px-2 py-2" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {allRecords.map(r => (
+              <>
+                <tr key={r.id} className="hover:bg-gray-50">
+                  <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{fmtShortDate(r.work_date)}</td>
+                  <td className="px-3 py-2 font-medium capitalize text-gray-900">{r.staff_name}</td>
+                  <td className="px-2 py-2 text-center text-green-700">{r.actual_in ?? <span className="text-gray-300">—</span>}</td>
+                  <td className="px-2 py-2 text-center text-orange-600">{r.actual_out ?? <span className="text-gray-300">—</span>}</td>
+                  <td className="px-2 py-2 text-gray-400">{r.entered_by ?? '—'}</td>
+                  <td className="px-2 py-2">
+                    <div className="flex gap-1 justify-end">
+                      <button onClick={() => { setAdminEditRow(r); setAdminEditIn(r.actual_in ?? ''); setAdminEditOut(r.actual_out ?? '') }}
+                        className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-xs font-semibold hover:bg-blue-100">Edit</button>
+                      <button onClick={() => adminDelete(r)}
+                        className="text-red-500 bg-red-50 px-2 py-0.5 rounded text-xs font-semibold hover:bg-red-100">Del</button>
+                    </div>
+                  </td>
+                </tr>
+                {adminEditRow?.id === r.id && (
+                  <tr key={`edit-${r.id}`} className="bg-blue-50/60 border-b border-blue-200">
+                    <td colSpan={6} className="px-3 py-2">
+                      <div className="flex items-end gap-2 flex-wrap">
+                        <div>
+                          <p className="text-xs text-gray-400 mb-0.5">Time In</p>
+                          <input value={adminEditIn} onChange={e => setAdminEditIn(e.target.value)}
+                            placeholder="e.g. 8:30am"
+                            className="bg-white border border-gray-200 rounded px-2 py-1 text-xs w-24 outline-none" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-400 mb-0.5">Time Out</p>
+                          <input value={adminEditOut} onChange={e => setAdminEditOut(e.target.value)}
+                            placeholder="e.g. 5:00pm"
+                            className="bg-white border border-gray-200 rounded px-2 py-1 text-xs w-24 outline-none" />
+                        </div>
+                        <div className="flex gap-1">
+                          <button onClick={adminSaveEdit} disabled={adminEditSaving}
+                            className="bg-green-600 text-white text-xs font-bold rounded px-3 py-1 disabled:opacity-40">
+                            {adminEditSaving ? '…' : 'Save'}
+                          </button>
+                          <button onClick={() => setAdminEditRow(null)}
+                            className="bg-gray-100 text-gray-600 text-xs font-semibold rounded px-3 py-1">Cancel</button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </>
+            ))}
+          </tbody>
+        </table>
+        {allRecords.length === 0 && <p className="py-8 text-center text-gray-400 text-xs">No records yet.</p>}
+      </div>
+    </div>
+  )
+
   return (
     <div className="space-y-4">
+      {isAdmin && (
+        <div className="flex justify-end">
+          <button onClick={() => setShowManage(true)}
+            className="text-sm font-semibold px-3 py-1.5 rounded-xl bg-purple-600 text-white hover:bg-purple-500 transition">
+            Manage Times
+          </button>
+        </div>
+      )}
       {/* Clock In/Out panel */}
       <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
         <p className="text-sm font-semibold text-gray-700">My Time Today</p>
@@ -1579,7 +1749,7 @@ function StaffClientInner({ role, username, embedded }: { role: string; username
         ))}
       </div>
 
-      {tab === 'Times' && <TimesTab username={username} />}
+      {tab === 'Times' && <TimesTab username={username} role={role} />}
       {tab === 'Payslips' && <PayslipsTab />}
       {tab === 'Violations' && <ViolationsTab role={role} />}
       {tab === 'Role' && <RoleTab role={role} />}
