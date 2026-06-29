@@ -5,20 +5,18 @@ import { NextRequest, NextResponse } from 'next/server'
 
 type Ctx = { params: Promise<{ id: string }> }
 
-function canManageTimes(session: Awaited<ReturnType<typeof auth>>) {
-  const role = (session?.user as any)?.role
-  const username = (session?.user as any)?.username ?? session?.user?.name ?? ''
-  return role === 'owner' || role === 'admin' || username?.toLowerCase() === 'rawlings'
-}
-
 export async function PUT(req: NextRequest, { params }: Ctx) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (!canManageTimes(session)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const u = session.user as any
+  const username = (u?.username ?? u?.name ?? '').toLowerCase()
+  if (u?.role !== 'owner' && u?.role !== 'admin' && username !== 'rawlings') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   const { id } = await params
   const { actual_in, actual_out } = await req.json()
-  const actor = (session.user as any)?.username ?? session.user?.name ?? 'Unknown'
+  const actor = u?.username ?? u?.name ?? 'Unknown'
 
   const [row] = await sql`
     UPDATE staff_times
@@ -34,10 +32,14 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
 export async function DELETE(_req: NextRequest, { params }: Ctx) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (!canManageTimes(session)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const u = session.user as any
+  const username = (u?.username ?? u?.name ?? '').toLowerCase()
+  if (u?.role !== 'owner' && u?.role !== 'admin' && username !== 'rawlings') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   const { id } = await params
-  const actor = (session.user as any)?.username ?? session.user?.name ?? 'Unknown'
+  const actor = u?.username ?? u?.name ?? 'Unknown'
 
   const [row] = await sql`
     DELETE FROM staff_times WHERE id = ${Number(id)}

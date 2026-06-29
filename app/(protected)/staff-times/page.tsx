@@ -514,6 +514,7 @@ export default function StaffTimesPage() {
                 </table>
               </div>
             )}
+          </div>
         </div>
       )}
     </div>
