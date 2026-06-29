@@ -464,28 +464,33 @@ export default function ItemsTab({ items, group, productType, search, violation,
   useEffect(() => {
     const rightPane = rightPaneRef.current
     if (!rightPane) return
-    const observer = new IntersectionObserver(entries => {
+    function onScroll() {
       if (scrollingFromClick.current) return
-      let topEntry: IntersectionObserverEntry | null = null
-      for (const entry of entries) {
-        if (entry.isIntersecting) {
-          if (!topEntry || entry.boundingClientRect.top < topEntry.boundingClientRect.top) topEntry = entry
+      const paneTop = rightPane!.getBoundingClientRect().top
+      const titleBars = rightPane!.querySelectorAll<HTMLElement>('[data-item-id]')
+      let best: HTMLElement | null = null
+      for (const el of titleBars) {
+        const top = el.getBoundingClientRect().top - paneTop
+        if (top <= 60) best = el
+        else break
+      }
+      if (!best) return
+      const id = Number(best.dataset.itemId)
+      if (!id) return
+      setSelectedId(prev => {
+        if (prev === id) return prev
+        const leftPane = leftPaneRef.current
+        const leftEl = leftPane?.querySelector<HTMLElement>(`[data-left-item="${id}"]`)
+        if (leftEl && leftPane) {
+          const lPaneTop = leftPane.getBoundingClientRect().top
+          const elTop = leftEl.getBoundingClientRect().top
+          leftPane.scrollBy({ top: elTop - lPaneTop - leftPane.clientHeight / 2, behavior: 'smooth' })
         }
-      }
-      if (!topEntry) return
-      const id = Number((topEntry.target as HTMLElement).dataset.itemId)
-      if (!id || id === selectedId) return
-      setSelectedId(id)
-      const leftPane = leftPaneRef.current
-      const leftEl = leftPane?.querySelector(`[data-left-item="${id}"]`) as HTMLElement | null
-      if (leftEl && leftPane) {
-        const paneTop = leftPane.getBoundingClientRect().top
-        const elTop = leftEl.getBoundingClientRect().top
-        leftPane.scrollBy({ top: elTop - paneTop - leftPane.clientHeight / 2, behavior: 'smooth' })
-      }
-    }, { root: rightPane, threshold: 0.1 })
-    rightPane.querySelectorAll('[data-item-id]').forEach(el => observer.observe(el))
-    return () => observer.disconnect()
+        return id
+      })
+    }
+    rightPane.addEventListener('scroll', onScroll, { passive: true })
+    return () => rightPane.removeEventListener('scroll', onScroll)
   }, [filteredItems])
 
   return (
