@@ -460,7 +460,7 @@ export default function ItemsTab({ items, group, productType, search, violation,
   return (
     <div className="flex h-full min-h-0">
       {/* LEFT: compact item cards */}
-      <div className="w-2/5 border-r border-gray-200 overflow-y-auto min-h-0">
+      <div className="w-1/3 border-r border-gray-200 overflow-y-auto min-h-0">
         <div className="px-2 py-1 border-b border-gray-100 bg-gray-50 sticky top-0 z-10">
           <span className="text-[9px] text-gray-400">{filteredItems.length} items</span>
         </div>
@@ -484,7 +484,7 @@ export default function ItemsTab({ items, group, productType, search, violation,
       </div>
 
       {/* RIGHT: add form + loss history */}
-      <div className="w-3/5 overflow-y-auto min-h-0 bg-white">
+      <div className="w-2/3 overflow-y-auto min-h-0 bg-white">
         {showAdd && (
           <div className="p-2 space-y-2 border-b border-gray-200">
             <p className="text-[10px] font-bold text-gray-600">New Item</p>
@@ -539,8 +539,8 @@ export default function ItemsTab({ items, group, productType, search, violation,
                   {lossRows.length === 0 ? (
                     <p className="text-[10px] text-gray-400 text-center py-4">No activity.</p>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse text-[9px] min-w-[340px]">
+                    <div>
+                      <table className="w-full border-collapse text-[9px]">
                         <thead>
                           <tr>
                             <th className="text-left px-0.5 py-1 font-semibold text-gray-500 border-b border-gray-200">DATE</th>
