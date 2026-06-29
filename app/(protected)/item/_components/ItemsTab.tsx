@@ -541,17 +541,17 @@ export default function ItemsTab({ items, group, productType, search, violation,
                   ) : (
                     <div>
                       <table className="w-full border-collapse text-[8px]">
-                        <thead>
-                          <tr>
-                            <th className="text-left pr-1 py-0.5 font-bold text-gray-500 border-b border-gray-200">DATE</th>
-                            <th className="text-center px-0 py-0.5 font-bold text-gray-500 border-b border-gray-200 border-l-2 border-l-gray-400">₵</th>
-                            <th className="text-center px-0 py-0.5 font-bold text-gray-500 border-b border-gray-200 border-l-2 border-l-gray-400">L/G</th>
-                            <th className="text-center px-0 py-0.5 font-bold text-gray-500 border-b border-gray-200 border-l-2 border-l-gray-400">CNT</th>
-                            <th className="text-center px-0 py-0.5 font-bold text-gray-500 border-b border-gray-200 border-l-2 border-l-gray-400">WIC</th>
-                            <th className="text-center px-0 py-0.5 font-bold text-gray-500 border-b border-gray-200 border-l-2 border-l-gray-400">GMC</th>
-                            <th className="text-center px-0 py-0.5 font-bold text-gray-500 border-b border-gray-200 border-l-2 border-l-gray-400">SP</th>
-                            <th className="text-center px-0 py-0.5 font-bold text-gray-500 border-b border-gray-200 border-l-2 border-l-gray-400">BL</th>
-                            <th className="text-center px-0 py-0.5 font-bold text-gray-500 border-b border-gray-200 border-l-2 border-l-gray-400">EXP</th>
+                        <thead className="sticky top-[28px] z-[9]">
+                          <tr className="bg-amber-400">
+                            <th className="text-left pr-1 py-0.5 font-bold text-gray-800 border-b-2 border-gray-400">DATE</th>
+                            <th className="text-center px-0 py-0.5 font-bold text-gray-800 border-b-2 border-gray-400 border-l-2 border-l-gray-400">₵</th>
+                            <th className="text-center px-0 py-0.5 font-bold text-gray-800 border-b-2 border-gray-400 border-l-2 border-l-gray-400">L/G</th>
+                            <th className="text-center px-0 py-0.5 font-bold text-gray-800 border-b-2 border-gray-400 border-l-2 border-l-gray-400">CNT</th>
+                            <th className="text-center px-0 py-0.5 font-bold text-gray-800 border-b-2 border-gray-400 border-l-2 border-l-gray-400">WIC</th>
+                            <th className="text-center px-0 py-0.5 font-bold text-gray-800 border-b-2 border-gray-400 border-l-2 border-l-gray-400">GMC</th>
+                            <th className="text-center px-0 py-0.5 font-bold text-gray-800 border-b-2 border-gray-400 border-l-2 border-l-gray-400">SP</th>
+                            <th className="text-center px-0 py-0.5 font-bold text-gray-800 border-b-2 border-gray-400 border-l-2 border-l-gray-400">BL</th>
+                            <th className="text-center px-0 py-0.5 font-bold text-gray-800 border-b-2 border-gray-400 border-l-2 border-l-gray-400">EXP</th>
                           </tr>
                         </thead>
                         <tbody>
