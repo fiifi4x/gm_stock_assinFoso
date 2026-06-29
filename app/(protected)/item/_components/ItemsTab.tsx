@@ -520,18 +520,18 @@ export default function ItemsTab({ items, group, productType, search, violation,
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center justify-between px-2 py-1 bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+                  <div className="flex items-center justify-between px-2 py-1 bg-blue-600 border-b border-blue-700 sticky top-0 z-10">
                     <div className="min-w-0 flex-1">
-                      <p className="text-[10px] font-bold text-gray-900 truncate">{item.item_name}</p>
-                      <p className="text-[9px] text-gray-400">{item.cf_group ?? 'No group'} · SOH: {Number(item.calculated_soh)}</p>
+                      <p className="text-[10px] font-bold text-white truncate">{item.item_name}</p>
+                      <p className="text-[9px] text-blue-200">{item.cf_group ?? 'No group'} · SOH: {Number(item.calculated_soh)}</p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       <a href={`/stock/${item.id}`}
-                        className="text-[9px] text-purple-600 font-semibold bg-purple-50 px-2 py-0.5 rounded hover:bg-purple-100">
+                        className="text-[9px] text-blue-600 font-semibold bg-white px-2 py-0.5 rounded hover:bg-blue-50">
                         360°
                       </a>
                       <button onClick={() => startEdit(item)}
-                        className="text-[9px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded hover:bg-blue-100">
+                        className="text-[9px] text-blue-600 font-semibold bg-white px-2 py-0.5 rounded hover:bg-blue-50">
                         Edit
                       </button>
                     </div>
