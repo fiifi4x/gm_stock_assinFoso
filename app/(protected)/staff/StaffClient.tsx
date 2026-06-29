@@ -1088,14 +1088,18 @@ function NoTimesFix({ date, onFixed }: { date: string; onFixed: (d: string) => v
     setEntries(prev => ({ ...prev, [s]: { ...prev[s], ...patch } }))
   }
 
-  const allFilled = STAFF.every(s => {
+  const anyFilled = STAFF.some(s => {
     const e = entries[s]
     return e.mode === 'away' || (e.mode === 'work' && e.timeIn)
   })
 
   async function save() {
     setSaving(true)
-    await Promise.all(STAFF.map(s => {
+    const toSave = STAFF.filter(s => {
+      const e = entries[s]
+      return e.mode === 'away' || (e.mode === 'work' && e.timeIn)
+    })
+    await Promise.all(toSave.map(s => {
       const e = entries[s]
       return fetch('/api/staff-times/entry', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1150,9 +1154,9 @@ function NoTimesFix({ date, onFixed }: { date: string; onFixed: (d: string) => v
           </div>
         )
       })}
-      <button onClick={save} disabled={!allFilled || saving}
+      <button onClick={save} disabled={!anyFilled || saving}
         className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-xs font-semibold rounded-lg py-2 transition">
-        {saving ? 'Saving…' : `Save All Staff (${STAFF.length})`}
+        {saving ? 'Saving…' : 'Save Times'}
       </button>
     </div>
   )
