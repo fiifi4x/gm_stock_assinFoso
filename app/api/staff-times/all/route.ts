@@ -8,10 +8,13 @@ export async function GET() {
   const session = await auth()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  // Add missing columns if they don't exist yet
+  await sql`ALTER TABLE staff_times ADD COLUMN IF NOT EXISTS entered_by TEXT`.catch(() => {})
+  await sql`ALTER TABLE staff_times ADD COLUMN IF NOT EXISTS status TEXT`.catch(() => {})
+
   try {
     const rows = await sql`
-      SELECT id, staff_name, work_date::text, actual_in, actual_out,
-             COALESCE(entered_by, '') AS entered_by
+      SELECT id, staff_name, work_date::text, actual_in, actual_out, entered_by, status
       FROM staff_times
       ORDER BY work_date DESC, staff_name
       LIMIT 500
