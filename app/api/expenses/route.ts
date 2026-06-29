@@ -8,7 +8,7 @@ export async function GET() {
     const rows = await sql`
       SELECT
         e.id, e.expense_date::date AS expense_date, e.expense_account,
-        e.cf_justify, e.vendor_name, e.amount, e.cf_expense_type,
+        e.description, e.cf_justify, e.vendor_name, e.amount, e.cf_expense_type,
         e.is_property, COALESCE(ep.property_status, 'at_shop') AS property_status, e.entered_by
       FROM expenses e
       LEFT JOIN expense_properties ep ON ep.expense_id = e.id
@@ -19,7 +19,7 @@ export async function GET() {
     const rows = await sql`
       SELECT
         e.id, e.expense_date::date AS expense_date, e.expense_account,
-        e.cf_justify, e.vendor_name, e.amount, e.cf_expense_type,
+        e.description, e.cf_justify, e.vendor_name, e.amount, e.cf_expense_type,
         e.is_property, COALESCE(ep.property_status, 'at_shop') AS property_status, NULL AS entered_by
       FROM expenses e
       LEFT JOIN expense_properties ep ON ep.expense_id = e.id

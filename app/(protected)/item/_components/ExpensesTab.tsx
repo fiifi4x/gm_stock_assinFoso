@@ -6,6 +6,7 @@ type Expense = {
   id: number
   expense_date: string
   expense_account: string
+  description: string | null
   cf_justify: string | null
   vendor_name: string | null
   amount: string
@@ -158,6 +159,7 @@ export default function ExpensesTab({ search }: Props) {
             <tr>
               <th className="text-left px-1 py-1 font-semibold text-gray-700 border border-black whitespace-nowrap">DATE</th>
               <th className="text-left px-1 py-1 font-semibold text-gray-700 border border-black">ACCOUNT</th>
+              <th className="text-left px-1 py-1 font-semibold text-gray-700 border border-black">DESCRIPTION</th>
               <th className="text-left px-1 py-1 font-semibold text-gray-700 border border-black">JUSTIFY</th>
               <th className="text-left px-1 py-1 font-semibold text-gray-700 border border-black">VENDOR</th>
               <th className="text-right px-1 py-1 font-semibold text-gray-700 border border-black">AMT</th>
@@ -171,6 +173,7 @@ export default function ExpensesTab({ search }: Props) {
                 <tr key={e.id} className="hover:bg-gray-50">
                   <td className="px-1 py-1 text-gray-600 whitespace-nowrap border border-black">{fmtShort(e.expense_date)}</td>
                   <td className="px-1 py-1 text-gray-900 font-semibold border border-black">{e.expense_account}</td>
+                  <td className="px-1 py-1 text-gray-700 border border-black">{e.description ?? '—'}</td>
                   <td className="px-1 py-1 text-gray-700 border border-black">{e.cf_justify ?? '—'}</td>
                   <td className="px-1 py-1 text-gray-500 border border-black">{e.vendor_name ?? '—'}</td>
                   <td className="px-1 py-1 text-right font-bold text-gray-900 border border-black">₵{fmt(e.amount)}</td>
@@ -203,7 +206,7 @@ export default function ExpensesTab({ search }: Props) {
                 </tr>
                 {editId === e.id && (
                   <tr key={`edit-${e.id}`} className="bg-blue-50/40 border-b border-blue-200">
-                    <td colSpan={7} className="px-2 py-2">
+                    <td colSpan={8} className="px-2 py-2">
                       <div className="grid grid-cols-2 gap-1 max-w-lg">
                         <div>
                           <p className="text-[9px] text-gray-400 mb-0.5">Date</p>
