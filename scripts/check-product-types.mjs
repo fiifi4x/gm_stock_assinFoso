@@ -5,5 +5,5 @@ const env = Object.fromEntries(
     .filter(l => l.includes('=')).map(l => [l.split('=')[0].trim(), l.slice(l.indexOf('=') + 1).trim()])
 )
 const sql = neon(env.DATABASE_URL)
-await sql`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS entered_by TEXT`
-console.log('Done — entered_by column added to expenses')
+const rows = await sql`SELECT DISTINCT product_type, COUNT(*) AS cnt FROM items GROUP BY product_type ORDER BY cnt DESC`
+console.log(JSON.stringify(rows))

@@ -5,5 +5,5 @@ const env = Object.fromEntries(
     .filter(l => l.includes('=')).map(l => [l.split('=')[0].trim(), l.slice(l.indexOf('=') + 1).trim()])
 )
 const sql = neon(env.DATABASE_URL)
-await sql`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS entered_by TEXT`
-console.log('Done — entered_by column added to expenses')
+const cols = await sql`SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'expenses' ORDER BY ordinal_position`
+console.log(cols.map(c => `${c.column_name} (${c.data_type})`).join('\n'))

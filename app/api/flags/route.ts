@@ -1,6 +1,8 @@
 import sql from '@/lib/db'
 import { NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 async function safeQuery(query: () => Promise<any[]>, fallback: any[] = []): Promise<any[]> {
   try { return await query() } catch (e) { console.error('[flags]', e); return fallback }
 }
