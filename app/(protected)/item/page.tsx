@@ -123,7 +123,6 @@ function ItemHubPageInner() {
   const [outerTab, setOuterTab] = useState<OuterTab>(
     initialTab && VALID_TABS.includes(initialTab) ? initialTab : 'today'
   )
-  const prevTabRef = useRef<OuterTab>('items')
   const [group, setGroup]               = useState<string | null>(null)
   const [productType, setProductType]   = useState<'all' | 'goods' | 'services'>('all')
   const [search, setSearch]             = useState('')
@@ -135,7 +134,6 @@ function ItemHubPageInner() {
   const [addForm, setAddForm]             = useState<'item' | 'sale' | 'bill' | 'expense' | null>(null)
   const groupRef     = useRef<HTMLDivElement>(null)
   const hamburgerRef = useRef<HTMLDivElement>(null)
-  const swipeRef     = useRef<{ x: number; y: number } | null>(null)
 
   const [items, setItems]           = useState<Item[]>([])
   const [itemsLoading, setItemsLoading] = useState(true)
@@ -210,7 +208,6 @@ function ItemHubPageInner() {
   }, [])
 
   function changeTab(t: OuterTab) {
-    if (outerTab !== t) prevTabRef.current = outerTab
     setOuterTab(t)
     setViolation(null)
     setViolationOpen(false)
@@ -394,15 +391,7 @@ function ItemHubPageInner() {
       </div>
 
       {/* ── Content ── */}
-      <div className="flex-1 min-h-0 overflow-y-auto"
-        onTouchStart={e => { const t = e.touches[0]; swipeRef.current = { x: t.clientX, y: t.clientY } }}
-        onTouchEnd={e => {
-          if (!swipeRef.current) return
-          const dx = e.changedTouches[0].clientX - swipeRef.current.x
-          const dy = e.changedTouches[0].clientY - swipeRef.current.y
-          swipeRef.current = null
-          if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) changeTab(outerTab === 'today' ? prevTabRef.current : 'today')
-        }}>
+      <div className="flex-1 min-h-0 overflow-y-auto">
         {addForm === 'sale'    && outerTab === 'sales'    && <div className="px-4"><NewSaleForm    onSuccess={() => { setAddForm(null); changeTab('sales') }} /></div>}
         {addForm === 'bill'    && outerTab === 'bills'    && <div className="px-4"><NewBillForm    onSuccess={() => { setAddForm(null); changeTab('bills') }} /></div>}
         {addForm === 'expense' && outerTab === 'expenses' && <div className="px-4"><NewExpenseForm onSuccess={() => { setAddForm(null); changeTab('expenses') }} /></div>}
