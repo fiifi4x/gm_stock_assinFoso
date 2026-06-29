@@ -460,6 +460,7 @@ export default function ItemsTab({ items, group, productType, search, violation,
   const leftPaneRef = useRef<HTMLDivElement>(null)
   const rightPaneRef = useRef<HTMLDivElement>(null)
   const scrollingFromClick = useRef(false)
+  const selectedIdRef = useRef<number | null>(null)
 
   useEffect(() => {
     const rightPane = rightPaneRef.current
@@ -476,18 +477,16 @@ export default function ItemsTab({ items, group, productType, search, violation,
       }
       if (!best) return
       const id = Number(best.dataset.itemId)
-      if (!id) return
-      setSelectedId(prev => {
-        if (prev === id) return prev
-        const leftPane = leftPaneRef.current
-        const leftEl = leftPane?.querySelector<HTMLElement>(`[data-left-item="${id}"]`)
-        if (leftEl && leftPane) {
-          const lPaneTop = leftPane.getBoundingClientRect().top
-          const elTop = leftEl.getBoundingClientRect().top
-          leftPane.scrollBy({ top: elTop - lPaneTop - leftPane.clientHeight / 2, behavior: 'smooth' })
-        }
-        return id
-      })
+      if (!id || id === selectedIdRef.current) return
+      selectedIdRef.current = id
+      setSelectedId(id)
+      const leftPane = leftPaneRef.current
+      const leftEl = leftPane?.querySelector<HTMLElement>(`[data-left-item="${id}"]`)
+      if (leftEl && leftPane) {
+        const lPaneTop = leftPane.getBoundingClientRect().top
+        const elTop = leftEl.getBoundingClientRect().top
+        leftPane.scrollBy({ top: elTop - lPaneTop - leftPane.clientHeight / 2, behavior: 'smooth' })
+      }
     }
     rightPane.addEventListener('scroll', onScroll, { passive: true })
     return () => rightPane.removeEventListener('scroll', onScroll)
