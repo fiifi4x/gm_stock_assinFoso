@@ -1,6 +1,6 @@
 'use client'
-import { useState, useEffect, useMemo, Fragment, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useState, useEffect, useMemo, Fragment, Suspense, useCallback } from 'react'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { fmtDate } from '@/lib/fmtDate'
 import { usePolling } from '@/lib/usePolling'
 import {
@@ -773,12 +773,13 @@ const VIOLATION_ICONS: Record<ViolationView, React.ReactNode> = {
   ),
 }
 
-function ViolationsTab({ role, username }: { role: string; username: string }) {
+function ViolationsTab({ role, username, vtab, setVtab }: { role: string; username: string; vtab: ViolationView; setVtab: (v: ViolationView) => void }) {
   const isAdmin = role === 'owner' || role === 'admin' || username === 'rawlings' || username === 'grony'
   const PAYSLIP_MONTHS = ['2026-04', '2026-05']
   const PAYSLIP_MONTH_LABELS: Record<string, string> = { '2026-04': 'April 2026', '2026-05': 'May 2026' }
 
-  const [vview, setVview] = useState<ViolationView>('Disciplinary')
+  const vview = vtab
+  const setVview = setVtab
   const [violations, setViolations] = useState<Violation[]>([])
   const [noTimesDays, setNoTimesDays] = useState<string[]>([])
   const [missingPayslips, setMissingPayslips] = useState<{ staff: string; month: string }[]>([])
@@ -1918,8 +1919,31 @@ function AssignmentsTab({ role }: { role: string }) {
 
 function StaffClientInner({ role, username, embedded }: { role: string; username: string; embedded?: boolean }) {
   const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+
   const initialTab = searchParams.get('tab')
-  const [tab, setTab] = useState<Tab>(TABS.includes(initialTab as Tab) ? (initialTab as Tab) : 'Times')
+  const initialVtab = searchParams.get('vtab')
+  const [tab, setTabState] = useState<Tab>(TABS.includes(initialTab as Tab) ? (initialTab as Tab) : 'Times')
+  const [vtab, setVtabState] = useState<ViolationView>(
+    VIOLATION_VIEWS.includes(initialVtab as ViolationView) ? (initialVtab as ViolationView) : 'Disciplinary'
+  )
+
+  const setTab = useCallback((t: Tab) => {
+    setTabState(t)
+    const p = new URLSearchParams(searchParams.toString())
+    p.set('tab', t)
+    if (t !== 'Violations') p.delete('vtab')
+    router.replace(`${pathname}?${p.toString()}`, { scroll: false })
+  }, [searchParams, router, pathname])
+
+  const setVtab = useCallback((v: ViolationView) => {
+    setVtabState(v)
+    const p = new URLSearchParams(searchParams.toString())
+    p.set('tab', 'Violations')
+    p.set('vtab', v)
+    router.replace(`${pathname}?${p.toString()}`, { scroll: false })
+  }, [searchParams, router, pathname])
 
   return (
     <div className="py-4 space-y-4">
@@ -1938,7 +1962,7 @@ function StaffClientInner({ role, username, embedded }: { role: string; username
 
       {tab === 'Times' && <TimesTab username={username} role={role} />}
       {tab === 'Payslips' && <PayslipsTab />}
-      {tab === 'Violations' && <ViolationsTab role={role} username={username} />}
+      {tab === 'Violations' && <ViolationsTab role={role} username={username} vtab={vtab} setVtab={setVtab} />}
       {tab === 'Role' && <RoleTab role={role} />}
       {tab === 'Rota' && <RotaTab />}
       {tab === 'Analytics' && <AnalyticsTab />}
