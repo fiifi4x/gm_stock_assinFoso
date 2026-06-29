@@ -540,22 +540,24 @@ export default function ItemsTab({ items, group, productType, search, violation,
                     <p className="text-[10px] text-gray-400 text-center py-4">No activity.</p>
                   ) : (
                     <div>
-                      <table className="w-full border-collapse text-[9px]">
+                      <table className="w-full border-collapse text-[8px]">
                         <thead>
                           <tr>
-                            <th className="text-left px-0.5 py-1 font-semibold text-gray-500 border-b border-gray-200">DATE</th>
-                            <th className="text-right px-0.5 py-1 font-semibold text-gray-500 border-b border-gray-200">CNT</th>
-                            <th className="text-right px-0.5 py-1 font-semibold text-gray-500 border-b border-gray-200">-WIC</th>
-                            <th className="text-right px-0.5 py-1 font-semibold text-gray-500 border-b border-gray-200">-GMC</th>
-                            <th className="text-right px-0.5 py-1 font-semibold text-gray-500 border-b border-gray-200">SP</th>
-                            <th className="text-right px-0.5 py-1 font-semibold text-gray-500 border-b border-gray-200">+BL</th>
-                            <th className="text-right px-0.5 py-1 font-semibold text-gray-500 border-b border-gray-200">CP</th>
-                            <th className="text-right px-0.5 py-1 font-semibold text-gray-500 border-b border-gray-200">EXP</th>
-                            <th className="text-right px-0.5 py-1 font-semibold text-gray-500 border-b border-gray-200">L/G</th>
+                            <th className="text-left px-0.5 py-0.5 font-semibold text-gray-500 border-b border-gray-200">DATE</th>
+                            <th className="text-right px-0.5 py-0.5 font-semibold text-gray-500 border-b border-gray-200">CNT</th>
+                            <th className="text-right px-0.5 py-0.5 font-semibold text-gray-500 border-b border-gray-200">-WIC</th>
+                            <th className="text-right px-0.5 py-0.5 font-semibold text-gray-500 border-b border-gray-200">-GMC</th>
+                            <th className="text-right px-0.5 py-0.5 font-semibold text-gray-500 border-b border-gray-200">SP</th>
+                            <th className="text-right px-0.5 py-0.5 font-semibold text-gray-500 border-b border-gray-200">+BL</th>
+                            <th className="text-right px-0.5 py-0.5 font-semibold text-gray-500 border-b border-gray-200">EXP</th>
+                            <th className="text-right px-0.5 py-0.5 font-semibold text-gray-500 border-b border-gray-200">L/G</th>
+                            <th className="text-right px-0.5 py-0.5 font-semibold text-gray-500 border-b border-gray-200">₵</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {lossRows.map((row, i) => (
+                          {lossRows.map((row, i) => {
+                            const lossVal = row.loss !== null && row.sell_price !== null ? row.loss * parseFloat(String(row.sell_price)) : null
+                            return (
                             <tr key={i} className={`border-b border-gray-100 ${row.loss !== null && row.loss > 0.001 ? 'bg-red-50' : ''}`}>
                               <td className="px-0.5 py-0.5 text-gray-500 whitespace-nowrap">{fmtDate(row.date)}</td>
                               <td className="px-0.5 py-0.5 text-right font-semibold text-gray-900">{fmtQ(row.qty_counted)}</td>
@@ -563,7 +565,6 @@ export default function ItemsTab({ items, group, productType, search, violation,
                               <td className="px-0.5 py-0.5 text-right text-gray-600">{fmtQ(row.gmc_qty)}</td>
                               <td className="px-0.5 py-0.5 text-right text-blue-500">{fmtQ(row.sell_price)}</td>
                               <td className="px-0.5 py-0.5 text-right text-blue-600">{fmtQ(row.bills_qty)}</td>
-                              <td className="px-0.5 py-0.5 text-right text-green-600">{fmtQ(row.cost_price)}</td>
                               <td className="px-0.5 py-0.5 text-right text-gray-400">{fmtN(row.expected_soh)}</td>
                               <td className="px-0.5 py-0.5 text-right font-semibold">
                                 {row.loss === null ? <span className="text-gray-300">—</span>
@@ -571,14 +572,27 @@ export default function ItemsTab({ items, group, productType, search, violation,
                                   : row.loss < -0.001 ? <span className="text-green-600">{fmtN(row.loss)}</span>
                                   : <span className="text-gray-400">0</span>}
                               </td>
+                              <td className="px-0.5 py-0.5 text-right font-semibold">
+                                {lossVal === null ? <span className="text-gray-300">—</span>
+                                  : lossVal > 0.01 ? <span className="text-red-600">{fmtN(lossVal)}</span>
+                                  : lossVal < -0.01 ? <span className="text-green-600">{fmtN(lossVal)}</span>
+                                  : <span className="text-gray-400">0</span>}
+                              </td>
                             </tr>
-                          ))}
+                            )
+                          })}
                         </tbody>
                         <tfoot>
                           <tr className="border-t-2 border-gray-200 bg-gray-50">
-                            <td colSpan={8} className="px-0.5 py-1 text-right font-bold text-gray-500">Total L/G</td>
+                            <td colSpan={7} className="px-0.5 py-1 text-right font-bold text-gray-500">Total L/G</td>
                             <td className={`px-0.5 py-1 text-right font-bold ${totalLoss > 0 ? 'text-red-600' : totalLoss < 0 ? 'text-green-600' : 'text-gray-400'}`}>
                               {totalLoss > 0 ? '+' : ''}{fmtN(totalLoss)}
+                            </td>
+                            <td className={`px-0.5 py-1 text-right font-bold ${totalLoss > 0 ? 'text-red-600' : totalLoss < 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                              {(() => {
+                                const totalCost = parseFloat(lossRows.reduce((s, r) => s + (r.loss !== null && r.sell_price !== null ? r.loss * parseFloat(String(r.sell_price)) : 0), 0).toFixed(2))
+                                return totalCost > 0 ? fmtN(totalCost) : totalCost < 0 ? fmtN(totalCost) : '0'
+                              })()}
                             </td>
                           </tr>
                         </tfoot>
