@@ -484,7 +484,7 @@ export default function ItemsTab({ items, group, productType, search, violation,
       </div>
 
       {/* RIGHT: add form + loss history */}
-      <div className="w-2/3 overflow-y-auto min-h-0 bg-white">
+      <div className="w-2/3 overflow-y-auto min-h-0 bg-white pr-2">
         {showAdd && (
           <div className="p-2 space-y-2 border-b border-gray-200">
             <p className="text-[10px] font-bold text-gray-600">New Item</p>
