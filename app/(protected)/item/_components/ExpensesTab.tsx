@@ -198,6 +198,9 @@ export default function ExpensesTab({ search }: Props) {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<ExpTab>('all')
   const [groupBy, setGroupBy] = useState<'none' | 'account' | 'vendor'>('none')
+  const [showHistory, setShowHistory] = useState(false)
+  const [logs, setLogs] = useState<{ id: number; staff_name: string; action: string; details: string | null; created_at: string }[]>([])
+  const [logsLoading, setLogsLoading] = useState(false)
   const [editId, setEditId] = useState<number | null>(null)
   const [form, setForm] = useState({ ...EMPTY_FORM })
   const [saving, setSaving] = useState(false)
@@ -213,6 +216,12 @@ export default function ExpensesTab({ search }: Props) {
 
   useEffect(() => { loadExpenses() }, [])
   usePolling(loadExpenses, 5000, editId === null)
+
+  useEffect(() => {
+    if (!showHistory || logs.length > 0) return
+    setLogsLoading(true)
+    fetch('/api/logs').then(r => r.json()).then(d => { setLogs(Array.isArray(d) ? d : []); setLogsLoading(false) }).catch(() => setLogsLoading(false))
+  }, [showHistory])
 
   const filtered = useMemo(() => {
     let list = expenses
@@ -335,10 +344,54 @@ export default function ExpensesTab({ search }: Props) {
             ${groupBy === 'vendor' ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-600'}`}>
           By Vendor
         </button>
+        <div className="w-px h-3 bg-gray-300 shrink-0" />
+        <button onClick={() => setShowHistory(h => !h)}
+          className={`text-[9px] font-semibold px-1.5 py-0.5 rounded transition
+            ${showHistory ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
+          History
+        </button>
         <span className="ml-auto text-[9px] text-gray-400">{filtered.length} records</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto min-h-0">
+      {showHistory && (
+        <div className="flex-1 overflow-y-auto min-h-0 border-t border-purple-200">
+          <div className="px-2 py-1 bg-purple-50 border-b border-purple-200 sticky top-0 z-10">
+            <p className="text-[9px] font-semibold text-purple-700">Activity History — all user actions</p>
+          </div>
+          {logsLoading ? (
+            <p className="text-[10px] text-gray-400 text-center py-10">Loading…</p>
+          ) : logs.length === 0 ? (
+            <p className="text-[10px] text-gray-400 text-center py-10">No activity recorded yet.</p>
+          ) : (
+            <table className="w-full border-collapse text-[10px] border border-black">
+              <thead className="sticky top-[28px] bg-gray-100 z-10">
+                <tr>
+                  <th className="text-left px-1 py-1 font-semibold text-gray-700 border border-black whitespace-nowrap">TIME</th>
+                  <th className="text-left px-1 py-1 font-semibold text-gray-700 border border-black">STAFF</th>
+                  <th className="text-left px-1 py-1 font-semibold text-gray-700 border border-black">ACTION</th>
+                  <th className="text-left px-1 py-1 font-semibold text-gray-700 border border-black">DETAILS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.map(log => {
+                  const dt = new Date(log.created_at)
+                  const timeStr = `${dt.getDate()} ${['Ja','Fe','Mr','Ap','My','Ju','Jl','Au','Se','Oc','No','De'][dt.getMonth()]} '${String(dt.getFullYear()).slice(-2)} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`
+                  return (
+                    <tr key={log.id} className="hover:bg-gray-50">
+                      <td className="px-1 py-1 text-gray-500 whitespace-nowrap border border-black">{timeStr}</td>
+                      <td className="px-1 py-1 font-semibold text-blue-600 border border-black">{log.staff_name}</td>
+                      <td className="px-1 py-1 text-gray-800 border border-black">{log.action}</td>
+                      <td className="px-1 py-1 text-gray-600 border border-black">{log.details ?? '—'}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {!showHistory && <div className="flex-1 overflow-y-auto min-h-0">
         {groupBy !== 'none' ? (
           grouped.length === 0
             ? <p className="text-[10px] text-gray-400 text-center py-10">No expenses</p>
@@ -359,7 +412,7 @@ export default function ExpensesTab({ search }: Props) {
             {filtered.length === 0 && <p className="text-[10px] text-gray-400 text-center py-10">No expenses</p>}
           </>
         )}
-      </div>
+      </div>}
     </div>
   )
 }
