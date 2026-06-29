@@ -84,7 +84,7 @@ export default function NewExpensePage({ onSuccess }: { onSuccess?: () => void }
         </div>
         {error && <p className="text-sm text-red-500 font-medium text-center">{error}</p>}
         <button type="submit" disabled={!description || !amount || saving}
-          className="w-full bg-purple-600 hover:bg-purple-500 active:bg-purple-700 disabled:opacity-40 text-gray-900 font-semibold rounded-xl py-4 text-base transition">
+          className="w-full bg-purple-600 hover:bg-purple-500 active:bg-purple-700 disabled:opacity-40 text-white font-semibold rounded-xl py-4 text-base transition">
           {saving ? 'Saving…' : 'Save Expense'}
         </button>
       </form>
