@@ -2,9 +2,10 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { fmtDate } from '@/lib/fmtDate'
+import HistoryPanel from '../item/_components/HistoryPanel'
 
 const STAFF = ['joe', 'bino', 'james', 'rawlings']
-const TABS = ['Time In', 'Time Out', 'Analytics'] as const
+const TABS = ['Time In', 'Time Out', 'Analytics', 'History'] as const
 type Tab = typeof TABS[number]
 
 type Mine = { actual_in: string | null; actual_out: string | null }
@@ -189,6 +190,15 @@ function AnalyticsTab({ all }: { all: RecentRow[] }) {
   )
 }
 
+function AttendanceHistory() {
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-gray-400">Showing all time entries recorded by staff — edits, additions, and deletions.</p>
+      <HistoryPanel keywords={['time', 'clocked']} />
+    </div>
+  )
+}
+
 export default function StaffTimesPage() {
   const { data: session } = useSession()
   const role = (session?.user as any)?.role
@@ -305,6 +315,8 @@ export default function StaffTimesPage() {
 
       {tab === 'Analytics' ? (
         <AnalyticsTab all={all} />
+      ) : tab === 'History' ? (
+        <AttendanceHistory />
       ) : (
         <div className="space-y-5">
           <ActionSection
