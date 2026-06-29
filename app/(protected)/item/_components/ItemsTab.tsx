@@ -559,7 +559,7 @@ export default function ItemsTab({ items, group, productType, search, violation,
                             const sp = item.selling_rate ? parseFloat(String(item.selling_rate)) : null
                             const lossVal = row.loss !== null && sp !== null ? row.loss * sp : null
                             return (
-                            <tr key={i} className={`border-b border-gray-100 ${row.loss !== null && row.loss > 0.001 ? 'bg-red-50' : ''}`}>
+                            <tr key={i} className={`border-b-2 border-gray-300 ${row.loss !== null && row.loss > 0.001 ? 'bg-red-50' : ''}`}>
                               <td className="pr-1 py-0.5 font-bold text-gray-500 whitespace-nowrap">{fmtDate(row.date)}</td>
                               <td className="px-0 py-0.5 text-center font-bold border-l-2 border-l-gray-400">
                                 {lossVal === null ? <span className="text-gray-300">—</span>
