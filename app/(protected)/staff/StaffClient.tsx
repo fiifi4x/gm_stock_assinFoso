@@ -216,8 +216,8 @@ function TimesTab({ username, role }: { username: string; role: string }) {
   const [addErr, setAddErr] = useState('')
 
   function load() {
-    const p1 = fetch('/api/staff-times/today').then(r => r.json())
-    const p2 = isAdmin ? fetch('/api/staff-times/all').then(r => r.json()) : Promise.resolve([])
+    const p1 = fetch('/api/staff-times/today').then(r => r.ok ? r.json() : {})
+    const p2 = isAdmin ? fetch('/api/staff-times/all').then(r => r.ok ? r.json() : []) : Promise.resolve([])
     Promise.all([p1, p2]).then(([d, all]) => {
       setToday(Array.isArray(d.today) ? d.today : [])
       setMine(d.mine ?? null)
