@@ -10,13 +10,15 @@ export async function GET() {
 
   try {
     const rows = await sql`
-      SELECT id, staff_name, work_date::text, actual_in, actual_out, entered_by
+      SELECT id, staff_name, work_date::text, actual_in, actual_out,
+             COALESCE(entered_by, '') AS entered_by
       FROM staff_times
       ORDER BY work_date DESC, staff_name
       LIMIT 500
     `
     return NextResponse.json(rows)
-  } catch {
-    return NextResponse.json([])
+  } catch (e: any) {
+    console.error('[staff-times/all]', e?.message)
+    return NextResponse.json({ error: e?.message }, { status: 500 })
   }
 }
