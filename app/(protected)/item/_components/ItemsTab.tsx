@@ -544,14 +544,14 @@ export default function ItemsTab({ items, group, productType, search, violation,
                         <thead>
                           <tr>
                             <th className="text-left pr-1 py-0.5 font-bold text-gray-500 border-b border-gray-200">DATE</th>
-                            <th className="text-right px-0 py-0.5 font-bold text-gray-500 border-b border-gray-200 border-l border-l-gray-200">₵</th>
-                            <th className="text-right px-0 py-0.5 font-bold text-gray-500 border-b border-gray-200 border-l border-l-gray-200">L/G</th>
-                            <th className="text-right px-0 py-0.5 font-bold text-gray-500 border-b border-gray-200 border-l border-l-gray-200">CNT</th>
-                            <th className="text-right px-0 py-0.5 font-bold text-gray-500 border-b border-gray-200 border-l border-l-gray-200">WIC</th>
-                            <th className="text-right px-0 py-0.5 font-bold text-gray-500 border-b border-gray-200 border-l border-l-gray-200">GMC</th>
-                            <th className="text-right px-0 py-0.5 font-bold text-gray-500 border-b border-gray-200 border-l border-l-gray-200">SP</th>
-                            <th className="text-right px-0 py-0.5 font-bold text-gray-500 border-b border-gray-200 border-l border-l-gray-200">BL</th>
-                            <th className="text-right px-0 py-0.5 font-bold text-gray-500 border-b border-gray-200 border-l border-l-gray-200">EXP</th>
+                            <th className="text-center px-0 py-0.5 font-bold text-gray-500 border-b border-gray-200 border-l-2 border-l-gray-400">₵</th>
+                            <th className="text-center px-0 py-0.5 font-bold text-gray-500 border-b border-gray-200 border-l-2 border-l-gray-400">L/G</th>
+                            <th className="text-center px-0 py-0.5 font-bold text-gray-500 border-b border-gray-200 border-l-2 border-l-gray-400">CNT</th>
+                            <th className="text-center px-0 py-0.5 font-bold text-gray-500 border-b border-gray-200 border-l-2 border-l-gray-400">WIC</th>
+                            <th className="text-center px-0 py-0.5 font-bold text-gray-500 border-b border-gray-200 border-l-2 border-l-gray-400">GMC</th>
+                            <th className="text-center px-0 py-0.5 font-bold text-gray-500 border-b border-gray-200 border-l-2 border-l-gray-400">SP</th>
+                            <th className="text-center px-0 py-0.5 font-bold text-gray-500 border-b border-gray-200 border-l-2 border-l-gray-400">BL</th>
+                            <th className="text-center px-0 py-0.5 font-bold text-gray-500 border-b border-gray-200 border-l-2 border-l-gray-400">EXP</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -561,24 +561,24 @@ export default function ItemsTab({ items, group, productType, search, violation,
                             return (
                             <tr key={i} className={`border-b border-gray-100 ${row.loss !== null && row.loss > 0.001 ? 'bg-red-50' : ''}`}>
                               <td className="pr-1 py-0.5 font-bold text-gray-500 whitespace-nowrap">{fmtDate(row.date)}</td>
-                              <td className="px-0 py-0.5 text-right font-bold border-l border-l-gray-200">
+                              <td className="px-0 py-0.5 text-center font-bold border-l-2 border-l-gray-400">
                                 {lossVal === null ? <span className="text-gray-300">—</span>
                                   : lossVal > 0.01 ? <span className="text-red-600">-{fmtN(lossVal)}</span>
                                   : lossVal < -0.01 ? <span className="text-green-600">+{fmtN(Math.abs(lossVal))}</span>
                                   : <span className="text-gray-400">0</span>}
                               </td>
-                              <td className="px-0 py-0.5 text-right font-bold border-l border-l-gray-200">
+                              <td className="px-0 py-0.5 text-center font-bold border-l-2 border-l-gray-400">
                                 {row.loss === null ? <span className="text-gray-300">—</span>
                                   : row.loss > 0.001 ? <span className="text-red-600">-{fmtN(row.loss)}</span>
                                   : row.loss < -0.001 ? <span className="text-green-600">+{fmtN(Math.abs(row.loss))}</span>
                                   : <span className="text-gray-400">0</span>}
                               </td>
-                              <td className="px-0 py-0.5 text-right font-bold border-l border-l-gray-200 text-gray-900">{fmtQ(row.qty_counted)}</td>
-                              <td className="px-0 py-0.5 text-right font-bold border-l border-l-gray-200 text-gray-600">{fmtQ(row.wic_qty)}</td>
-                              <td className="px-0 py-0.5 text-right font-bold border-l border-l-gray-200 text-gray-600">{fmtQ(row.gmc_qty)}</td>
-                              <td className="px-0 py-0.5 text-right font-bold border-l border-l-gray-200 text-blue-500">{fmtQ(row.sell_price)}</td>
-                              <td className="px-0 py-0.5 text-right font-bold border-l border-l-gray-200 text-blue-600">{fmtQ(row.bills_qty)}</td>
-                              <td className="px-0 py-0.5 text-right font-bold border-l border-l-gray-200 text-gray-400">{fmtN(row.expected_soh)}</td>
+                              <td className="px-0 py-0.5 text-center font-bold border-l-2 border-l-gray-400 text-gray-900">{fmtQ(row.qty_counted)}</td>
+                              <td className="px-0 py-0.5 text-center font-bold border-l-2 border-l-gray-400 text-gray-600">{fmtQ(row.wic_qty)}</td>
+                              <td className="px-0 py-0.5 text-center font-bold border-l-2 border-l-gray-400 text-gray-600">{fmtQ(row.gmc_qty)}</td>
+                              <td className="px-0 py-0.5 text-center font-bold border-l-2 border-l-gray-400 text-blue-500">{fmtQ(row.sell_price)}</td>
+                              <td className="px-0 py-0.5 text-center font-bold border-l-2 border-l-gray-400 text-blue-600">{fmtQ(row.bills_qty)}</td>
+                              <td className="px-0 py-0.5 text-center font-bold border-l-2 border-l-gray-400 text-gray-400">{fmtN(row.expected_soh)}</td>
                             </tr>
                             )
                           })}
@@ -587,7 +587,7 @@ export default function ItemsTab({ items, group, productType, search, violation,
                           {(() => {
                             const sp2 = item.selling_rate ? parseFloat(String(item.selling_rate)) : 0
                             const totalCost = parseFloat(lossRows.reduce((s, r) => s + (r.loss !== null ? r.loss * sp2 : 0), 0).toFixed(2))
-                            const cls = `px-0 py-1 text-right font-bold ${totalLoss > 0 ? 'text-red-600' : totalLoss < 0 ? 'text-green-600' : 'text-gray-400'}`
+                            const cls = `px-0 py-1 text-center font-bold border-l-2 border-l-gray-400 ${totalLoss > 0 ? 'text-red-600' : totalLoss < 0 ? 'text-green-600' : 'text-gray-400'}`
                             return (
                               <tr className="border-t-2 border-gray-200 bg-gray-50">
                                 <td className="pr-1 py-1 font-bold text-gray-500">Total</td>
