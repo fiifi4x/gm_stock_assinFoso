@@ -52,6 +52,8 @@ export default function ExpensesTab({ search }: Props) {
   const [editId, setEditId] = useState<number | null>(null)
   const [form, setForm] = useState({ ...EMPTY_FORM })
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   function loadExpenses() {
     fetch('/api/expenses')
@@ -117,6 +119,17 @@ export default function ExpensesTab({ search }: Props) {
     }
   }
 
+  async function deleteExpense(id: number) {
+    setDeleting(true)
+    const res = await fetch(`/api/expenses/${id}`, { method: 'DELETE' })
+    setDeleting(false)
+    if (res.ok) {
+      setExpenses(prev => prev.filter(e => e.id !== id))
+      setSelected(null)
+      setConfirmDelete(false)
+    }
+  }
+
   async function setPropertyStatus(expense: Expense, status: string) {
     const res = await fetch(`/api/expenses/${expense.id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -164,7 +177,7 @@ export default function ExpensesTab({ search }: Props) {
             </thead>
             <tbody>
               {filtered.map(e => (
-                <tr key={e.id} onClick={() => { setSelected(e); setShowForm(false) }}
+                <tr key={e.id} onClick={() => { setSelected(e); setShowForm(false); setConfirmDelete(false) }}
                   className={`cursor-pointer border-b border-gray-100 transition ${selected?.id === e.id ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
                   <td className="px-0.5 py-0.5 text-gray-700 whitespace-nowrap">{fmtShort(e.expense_date)}</td>
                   <td className="px-0.5 py-0.5 text-gray-900 truncate max-w-[80px]">{e.expense_account}</td>
@@ -238,10 +251,29 @@ export default function ExpensesTab({ search }: Props) {
                   <p className="text-[10px] font-bold text-gray-900 leading-snug">{selected.expense_account}</p>
                   <p className="text-[9px] text-gray-400">{fmtShort(selected.expense_date)}</p>
                 </div>
-                <button onClick={() => openEdit(selected)}
-                  className="shrink-0 text-[9px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded hover:bg-blue-100">
-                  Edit
-                </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={() => openEdit(selected)}
+                    className="text-[9px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded hover:bg-blue-100">
+                    Edit
+                  </button>
+                  {!confirmDelete ? (
+                    <button onClick={() => setConfirmDelete(true)}
+                      className="text-[9px] text-red-600 font-semibold bg-red-50 px-2 py-0.5 rounded hover:bg-red-100">
+                      Delete
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => deleteExpense(selected.id)} disabled={deleting}
+                        className="text-[9px] text-white font-semibold bg-red-600 px-2 py-0.5 rounded hover:bg-red-700 disabled:opacity-40">
+                        {deleting ? '…' : 'Confirm'}
+                      </button>
+                      <button onClick={() => setConfirmDelete(false)}
+                        className="text-[9px] text-gray-600 font-semibold bg-gray-100 px-2 py-0.5 rounded hover:bg-gray-200">
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
               <table className="w-full border-collapse text-[10px]">
                 <tbody>

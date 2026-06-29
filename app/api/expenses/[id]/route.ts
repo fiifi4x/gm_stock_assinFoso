@@ -39,6 +39,17 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
   return NextResponse.json({ ...row, property_status: ep?.property_status ?? null })
 }
 
+export async function DELETE(_req: NextRequest, { params }: Ctx) {
+  const session = await auth()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { id } = await params
+  await sql`DELETE FROM expense_properties WHERE expense_id = ${Number(id)}`
+  const [row] = await sql`DELETE FROM expenses WHERE id = ${Number(id)} RETURNING id`
+  if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  return NextResponse.json({ ok: true })
+}
+
 export async function PATCH(req: NextRequest, { params }: Ctx) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
