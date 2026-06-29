@@ -1068,7 +1068,7 @@ function NoTimesFix({ date, onFixed }: { date: string; onFixed: (d: string) => v
   }
 
   return (
-    <FixRow label={fmtDate(date)} sub="No staff times recorded">
+    <>
       <select value={staff} onChange={e => setStaff(e.target.value)} className={inputCls}>
         {STAFF.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
       </select>
@@ -1086,7 +1086,7 @@ function NoTimesFix({ date, onFixed }: { date: string; onFixed: (d: string) => v
         className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-xs font-semibold rounded-lg py-1.5 transition">
         {saving ? 'Saving…' : 'Save Times'}
       </button>
-    </FixRow>
+    </>
   )
 }
 
