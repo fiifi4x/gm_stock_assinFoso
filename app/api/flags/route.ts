@@ -198,17 +198,15 @@ export async function GET() {
       ORDER BY canonical_name
     `),
 
-    // 7. Days with a sales receipt where not all 4 staff have been accounted for
+    // 7. Days with a sales receipt but no staff times entered at all
     safeQuery(() => sql`
       SELECT DISTINCT receipt_date::date::text AS missing_date
       FROM sales_receipts sr
       WHERE sr.receipt_date::date < CURRENT_DATE
-        AND (
-          SELECT COUNT(DISTINCT st.staff_name)
-          FROM staff_times st
+        AND NOT EXISTS (
+          SELECT 1 FROM staff_times st
           WHERE st.work_date = sr.receipt_date::date
-            AND st.staff_name = ANY(ARRAY['joe','bino','james','rawlings'])
-        ) < 4
+        )
       ORDER BY missing_date DESC
     `),
 
