@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { fmtDate } from '@/lib/fmtDate'
 
 const STAFF = ['joe', 'bino', 'james', 'rawlings']
@@ -8,7 +9,7 @@ type Tab = typeof TABS[number]
 
 type Mine = { actual_in: string | null; actual_out: string | null }
 type StaffRow = { staff_name: string; actual_in: string | null; actual_out: string | null }
-type RecentRow = { staff_name: string; work_date: string; actual_in: string | null; actual_out: string | null; entered_by: string | null }
+type RecentRow = { id: number; staff_name: string; work_date: string; actual_in: string | null; actual_out: string | null; entered_by: string | null }
 
 // Ghana is UTC+0 always
 function ghanaFmt12Now() {
@@ -135,10 +136,10 @@ function ActionSection({
 }
 
 function groupByDate(rows: RecentRow[]) {
-  const map = new Map<string, Record<string, { in: string | null; out: string | null }>>()
+  const map = new Map<string, Record<string, { id: number; in: string | null; out: string | null }>>()
   for (const r of rows) {
     if (!map.has(r.work_date)) map.set(r.work_date, {})
-    map.get(r.work_date)![r.staff_name] = { in: r.actual_in, out: r.actual_out }
+    map.get(r.work_date)![r.staff_name] = { id: r.id, in: r.actual_in, out: r.actual_out }
   }
   return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]))
 }
@@ -189,6 +190,11 @@ function AnalyticsTab({ all }: { all: RecentRow[] }) {
 }
 
 export default function StaffTimesPage() {
+  const { data: session } = useSession()
+  const role = (session?.user as any)?.role
+  const username = ((session?.user as any)?.username ?? session?.user?.name ?? '').toLowerCase()
+  const isAdmin = role === 'owner' || role === 'admin' || username === 'rawlings'
+
   const [tab, setTab] = useState<Tab>('Time In')
   const [mine, setMine] = useState<Mine | null>(null)
   const [today, setToday] = useState<StaffRow[]>([])
@@ -198,19 +204,69 @@ export default function StaffTimesPage() {
   const [picking, setPicking] = useState(false)
   const [error, setError] = useState('')
 
+  // Admin state
+  const [editRow, setEditRow] = useState<RecentRow | null>(null)
+  const [editIn, setEditIn] = useState('')
+  const [editOut, setEditOut] = useState('')
+  const [editSaving, setEditSaving] = useState(false)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [addStaff, setAddStaff] = useState(STAFF[0])
+  const [addDate, setAddDate] = useState('')
+  const [addIn, setAddIn] = useState('')
+  const [addOut, setAddOut] = useState('')
+  const [addSaving, setAddSaving] = useState(false)
+  const [addError, setAddError] = useState('')
+
   function fetchData() {
-    fetch('/api/staff-times/today')
-      .then(r => r.json())
-      .then(d => {
-        setMine(d.mine ?? null)
-        setToday(Array.isArray(d.today) ? d.today : [])
-        setAll(Array.isArray(d.recent) ? d.recent : [])
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
+    Promise.all([
+      fetch('/api/staff-times/today').then(r => r.json()),
+      fetch('/api/staff-times/all').then(r => r.json()),
+    ]).then(([d, allRows]) => {
+      setMine(d.mine ?? null)
+      setToday(Array.isArray(d.today) ? d.today : [])
+      setAll(Array.isArray(allRows) ? allRows : [])
+      setLoading(false)
+    }).catch(() => setLoading(false))
   }
 
   useEffect(() => { fetchData() }, [])
+
+  async function saveEdit() {
+    if (!editRow) return
+    setEditSaving(true)
+    const res = await fetch(`/api/staff-times/entry-id/${editRow.id}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actual_in: editIn || null, actual_out: editOut || null }),
+    })
+    setEditSaving(false)
+    if (res.ok) {
+      const updated: RecentRow = await res.json()
+      setAll(prev => prev.map(r => r.id === updated.id ? { ...r, ...updated } : r))
+      setEditRow(null)
+    }
+  }
+
+  async function deleteRow(row: RecentRow) {
+    if (!confirm(`Delete time entry for ${row.staff_name} on ${row.work_date}?`)) return
+    await fetch(`/api/staff-times/entry-id/${row.id}`, { method: 'DELETE' })
+    setAll(prev => prev.filter(r => r.id !== row.id))
+  }
+
+  async function addEntry() {
+    if (!addDate || !addIn) { setAddError('Date and Time In are required'); return }
+    setAddSaving(true); setAddError('')
+    const res = await fetch('/api/staff-times/entry', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ staff_name: addStaff, work_date: addDate, actual_in: addIn, actual_out: addOut || null }),
+    })
+    setAddSaving(false)
+    if (res.ok) {
+      setShowAddForm(false); setAddIn(''); setAddOut(''); setAddDate('')
+      fetchData()
+    } else {
+      const d = await res.json(); setAddError(d.error ?? 'Failed to save')
+    }
+  }
 
   async function record(action: 'in' | 'out', time: string) {
     setSaving(true); setError('')
@@ -293,44 +349,159 @@ export default function StaffTimesPage() {
 
           {/* Full history */}
           <div>
-            <p className="text-sm font-semibold text-gray-700 mb-2">All Records</p>
-            <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto">
-              <table className="w-full text-xs min-w-[520px]">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="text-left px-3 py-2 text-gray-500 font-semibold">Date</th>
-                    {STAFF.map(s => (
-                      <th key={s} colSpan={2} className="text-center px-2 py-2 text-gray-500 font-semibold capitalize">{s}</th>
-                    ))}
-                  </tr>
-                  <tr className="border-b border-gray-100">
-                    <th className="px-3 py-1" />
-                    {STAFF.map(s => (
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-semibold text-gray-700">All Records</p>
+              {isAdmin && (
+                <button onClick={() => setShowAddForm(v => !v)}
+                  className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-lg hover:bg-blue-100 transition">
+                  {showAddForm ? 'Cancel' : '+ Add Entry'}
+                </button>
+              )}
+            </div>
+
+            {isAdmin && showAddForm && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3 space-y-3">
+                <p className="text-xs font-semibold text-blue-700">New Time Entry</p>
+                {addError && <p className="text-xs text-red-500">{addError}</p>}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Staff</p>
+                    <select value={addStaff} onChange={e => setAddStaff(e.target.value)}
+                      className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm outline-none">
+                      {STAFF.map(s => <option key={s} value={s} className="capitalize">{s}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Date</p>
+                    <input type="date" value={addDate} onChange={e => setAddDate(e.target.value)}
+                      className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm outline-none" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Time In</p>
+                    <input placeholder="e.g. 8:30am" value={addIn} onChange={e => setAddIn(e.target.value)}
+                      className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm outline-none" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Time Out</p>
+                    <input placeholder="e.g. 5:00pm" value={addOut} onChange={e => setAddOut(e.target.value)}
+                      className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm outline-none" />
+                  </div>
+                </div>
+                <button onClick={addEntry} disabled={addSaving}
+                  className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-sm font-semibold rounded-lg py-2 transition">
+                  {addSaving ? 'Saving…' : 'Save Entry'}
+                </button>
+              </div>
+            )}
+
+            {isAdmin ? (
+              /* Admin flat list with edit/delete per row */
+              <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="text-left px-3 py-2 text-gray-500 font-semibold">Date</th>
+                      <th className="text-left px-3 py-2 text-gray-500 font-semibold">Staff</th>
+                      <th className="text-center px-2 py-2 text-green-600 font-semibold">In</th>
+                      <th className="text-center px-2 py-2 text-orange-500 font-semibold">Out</th>
+                      <th className="text-left px-2 py-2 text-gray-400 font-semibold">By</th>
+                      <th className="px-2 py-2" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {all.map(r => (
                       <>
-                        <th key={s + 'i'} className="text-center px-1 py-1 text-green-600 font-medium">In</th>
-                        <th key={s + 'o'} className="text-center px-1 py-1 text-orange-500 font-medium">Out</th>
+                        <tr key={r.id} className="hover:bg-gray-50">
+                          <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{fmtDate(r.work_date)}</td>
+                          <td className="px-3 py-2 font-medium capitalize text-gray-900">{r.staff_name}</td>
+                          <td className="px-2 py-2 text-center text-green-700">{r.actual_in ?? <span className="text-gray-300">—</span>}</td>
+                          <td className="px-2 py-2 text-center text-orange-600">{r.actual_out ?? <span className="text-gray-300">—</span>}</td>
+                          <td className="px-2 py-2 text-gray-400">{r.entered_by ?? '—'}</td>
+                          <td className="px-2 py-2">
+                            <div className="flex gap-1 justify-end">
+                              <button onClick={() => { setEditRow(r); setEditIn(r.actual_in ?? ''); setEditOut(r.actual_out ?? '') }}
+                                className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-xs font-semibold hover:bg-blue-100">
+                                Edit
+                              </button>
+                              <button onClick={() => deleteRow(r)}
+                                className="text-red-500 bg-red-50 px-2 py-0.5 rounded text-xs font-semibold hover:bg-red-100">
+                                Del
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                        {editRow?.id === r.id && (
+                          <tr key={`edit-${r.id}`} className="bg-blue-50/60 border-b border-blue-200">
+                            <td colSpan={6} className="px-3 py-2">
+                              <div className="flex items-end gap-2 flex-wrap">
+                                <div>
+                                  <p className="text-xs text-gray-400 mb-0.5">Time In</p>
+                                  <input value={editIn} onChange={e => setEditIn(e.target.value)}
+                                    placeholder="e.g. 8:30am"
+                                    className="bg-white border border-gray-200 rounded px-2 py-1 text-xs w-24 outline-none" />
+                                </div>
+                                <div>
+                                  <p className="text-xs text-gray-400 mb-0.5">Time Out</p>
+                                  <input value={editOut} onChange={e => setEditOut(e.target.value)}
+                                    placeholder="e.g. 5:00pm"
+                                    className="bg-white border border-gray-200 rounded px-2 py-1 text-xs w-24 outline-none" />
+                                </div>
+                                <div className="flex gap-1">
+                                  <button onClick={saveEdit} disabled={editSaving}
+                                    className="bg-green-600 text-white text-xs font-bold rounded px-3 py-1 disabled:opacity-40">
+                                    {editSaving ? '…' : 'Save'}
+                                  </button>
+                                  <button onClick={() => setEditRow(null)}
+                                    className="bg-gray-100 text-gray-600 text-xs font-semibold rounded px-3 py-1">
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
                       </>
                     ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {grouped.map(([date, map]) => (
-                    <tr key={date} className="hover:bg-gray-50">
-                      <td className="px-3 py-2 text-gray-600 whitespace-nowrap">
-                        {fmtDate(date)}
-                      </td>
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              /* Non-admin grouped grid view */
+              <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto">
+                <table className="w-full text-xs min-w-[520px]">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="text-left px-3 py-2 text-gray-500 font-semibold">Date</th>
+                      {STAFF.map(s => (
+                        <th key={s} colSpan={2} className="text-center px-2 py-2 text-gray-500 font-semibold capitalize">{s}</th>
+                      ))}
+                    </tr>
+                    <tr className="border-b border-gray-100">
+                      <th className="px-3 py-1" />
                       {STAFF.map(s => (
                         <>
-                          <td key={s + 'i'} className="text-center px-1 py-2 text-green-700">{map[s]?.in ?? <span className="text-gray-200">—</span>}</td>
-                          <td key={s + 'o'} className="text-center px-1 py-2 text-orange-600">{map[s]?.out ?? <span className="text-gray-200">—</span>}</td>
+                          <th key={s + 'i'} className="text-center px-1 py-1 text-green-600 font-medium">In</th>
+                          <th key={s + 'o'} className="text-center px-1 py-1 text-orange-500 font-medium">Out</th>
                         </>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {grouped.map(([date, map]) => (
+                      <tr key={date} className="hover:bg-gray-50">
+                        <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{fmtDate(date)}</td>
+                        {STAFF.map(s => (
+                          <>
+                            <td key={s + 'i'} className="text-center px-1 py-2 text-green-700">{map[s]?.in ?? <span className="text-gray-200">—</span>}</td>
+                            <td key={s + 'o'} className="text-center px-1 py-2 text-orange-600">{map[s]?.out ?? <span className="text-gray-200">—</span>}</td>
+                          </>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
         </div>
       )}
     </div>

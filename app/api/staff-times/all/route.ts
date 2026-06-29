@@ -8,7 +8,7 @@ export async function GET() {
 
   try {
     const rows = await sql`
-      SELECT id, staff_name, work_date::text, actual_in, actual_out
+      SELECT id, staff_name, work_date::text, actual_in, actual_out, entered_by
       FROM staff_times
       ORDER BY work_date DESC, staff_name
       LIMIT 500
