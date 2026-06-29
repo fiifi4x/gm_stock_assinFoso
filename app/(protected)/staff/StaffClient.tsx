@@ -1093,7 +1093,7 @@ function NoTimesFix({ date, onFixed }: { date: string; onFixed: (d: string) => v
     return e.mode === 'away' || (e.mode === 'work' && e.timeIn)
   })
 
-  async function save() {
+  async function doSave(complete: boolean) {
     setSaving(true)
     const toSave = STAFF.filter(s => {
       const e = entries[s]
@@ -1112,7 +1112,7 @@ function NoTimesFix({ date, onFixed }: { date: string; onFixed: (d: string) => v
       })
     }))
     setSaving(false)
-    onFixed(date)
+    if (complete) onFixed(date)
   }
 
   return (
@@ -1154,10 +1154,16 @@ function NoTimesFix({ date, onFixed }: { date: string; onFixed: (d: string) => v
           </div>
         )
       })}
-      <button onClick={save} disabled={!anyFilled || saving}
-        className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-xs font-semibold rounded-lg py-2 transition">
-        {saving ? 'Saving…' : 'Save Times'}
-      </button>
+      <div className="flex gap-2">
+        <button onClick={() => doSave(false)} disabled={!anyFilled || saving}
+          className="flex-1 bg-gray-600 hover:bg-gray-500 disabled:opacity-40 text-white text-xs font-semibold rounded-lg py-2 transition">
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+        <button onClick={() => doSave(true)} disabled={!anyFilled || saving}
+          className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-xs font-semibold rounded-lg py-2 transition">
+          {saving ? '…' : 'Complete'}
+        </button>
+      </div>
     </div>
   )
 }
