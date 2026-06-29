@@ -804,10 +804,11 @@ function ViolationsTab({ role, username }: { role: string; username: string }) {
   const [staffFilter, setStaffFilter] = useState('All')
 
   useEffect(() => {
+    const safe = (p: Promise<Response>) => p.then(r => r.ok ? r.json() : null).catch(() => null)
     Promise.all([
-      fetch('/api/staff/violations').then(r => r.json()),
-      fetch('/api/flags').then(r => r.json()),
-      fetch('/api/payslips').then(r => r.json()),
+      safe(fetch('/api/staff/violations')),
+      safe(fetch('/api/flags')),
+      safe(fetch('/api/payslips')),
     ]).then(([v, flags, payslips]) => {
       setViolations(Array.isArray(v) ? v : [])
       setNoTimesDays((flags?.noStaffTimes ?? []).map((r: any) => r.missing_date))
@@ -822,7 +823,7 @@ function ViolationsTab({ role, username }: { role: string; username: string }) {
       }
       setMissingPayslips(missing)
       setLoading(false)
-    }).catch(() => setLoading(false))
+    })
   }, [])
 
   async function submit() {
