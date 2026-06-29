@@ -196,20 +196,16 @@ export async function GET() {
       ORDER BY canonical_name
     `),
 
-    // 7. Days with no staff times at all (exclude Sundays and today)
+    // 7. Days with a sales receipt but no staff times entered (exclude Sundays and today)
     safeQuery(() => sql`
-      WITH date_series AS (
-        SELECT generate_series(
-          (SELECT MIN(work_date) FROM staff_times),
-          CURRENT_DATE - INTERVAL '1 day',
-          INTERVAL '1 day'
-        )::date AS d
-      )
-      SELECT d::text AS missing_date
-      FROM date_series
-      WHERE EXTRACT(DOW FROM d) <> 0
-        AND d NOT IN (SELECT DISTINCT work_date FROM staff_times WHERE actual_in IS NOT NULL)
-      ORDER BY d DESC
+      SELECT DISTINCT receipt_date::date::text AS missing_date
+      FROM sales_receipts
+      WHERE receipt_date::date < CURRENT_DATE
+        AND EXTRACT(DOW FROM receipt_date::date) <> 0
+        AND receipt_date::date NOT IN (
+          SELECT DISTINCT work_date FROM staff_times WHERE actual_in IS NOT NULL
+        )
+      ORDER BY missing_date DESC
     `),
 
     // 8. Weeks with no cash-at-bank confirmation (cab_total not recorded)

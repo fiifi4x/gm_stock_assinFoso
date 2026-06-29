@@ -85,7 +85,7 @@ const SEVERITY_COLORS: Record<string, string> = {
   serious: 'bg-red-100 text-red-600',
 }
 
-const TABS = ['Times', 'Payslips', 'Violations', 'Role', 'No Times', 'Rota', 'Analytics', 'Assignments'] as const
+const TABS = ['Times', 'Payslips', 'Violations', 'Role', 'Rota', 'Analytics', 'Assignments'] as const
 type Tab = (typeof TABS)[number]
 
 const TAB_ICONS: Record<Tab, React.ReactNode> = {
@@ -107,11 +107,6 @@ const TAB_ICONS: Record<Tab, React.ReactNode> = {
   Role: (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-    </svg>
-  ),
-  'No Times': (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
     </svg>
   ),
   Rota: (
@@ -772,8 +767,10 @@ function PayslipsTab() {
 
 // ── VIOLATIONS TAB ────────────────────────────────────────────────────────────
 
-function ViolationsTab({ role }: { role: string }) {
+function ViolationsTab({ role, username }: { role: string; username: string }) {
+  const isAdmin = role === 'owner' || role === 'admin' || username === 'rawlings' || username === 'grony'
   const [violations, setViolations] = useState<Violation[]>([])
+  const [noTimesDays, setNoTimesDays] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ staff_name: STAFF[0], violation: '', details: '', severity: 'minor', points: '5' })
@@ -781,9 +778,14 @@ function ViolationsTab({ role }: { role: string }) {
   const [staffFilter, setStaffFilter] = useState('All')
 
   useEffect(() => {
-    fetch('/api/staff/violations').then(r => r.json())
-      .then(d => { setViolations(Array.isArray(d) ? d : []); setLoading(false) })
-      .catch(() => setLoading(false))
+    Promise.all([
+      fetch('/api/staff/violations').then(r => r.json()),
+      fetch('/api/flags').then(r => r.json()),
+    ]).then(([v, flags]) => {
+      setViolations(Array.isArray(v) ? v : [])
+      setNoTimesDays((flags?.noStaffTimes ?? []).map((r: any) => r.missing_date))
+      setLoading(false)
+    }).catch(() => setLoading(false))
   }, [])
 
   async function submit() {
@@ -928,11 +930,40 @@ function ViolationsTab({ role }: { role: string }) {
           </div>
         ))
       }
+
+      {/* ── Missing Staff Times ── */}
+      <div className="border-t border-gray-200 pt-4">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-sm font-semibold text-gray-700">Missing Staff Times</p>
+          {noTimesDays.length > 0 && (
+            <span className="text-[10px] font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
+              {noTimesDays.length} day{noTimesDays.length !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+        <p className="text-[11px] text-gray-400 mb-3">Days that have a sales receipt but no staff time was entered.</p>
+        {noTimesDays.length === 0
+          ? <p className="py-4 text-center text-gray-400 text-xs">All sales days have staff times recorded.</p>
+          : (
+            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100">
+              {noTimesDays.map(date => (
+                <FixRow key={date} label={fmtDate(date)} sub="No staff times recorded">
+                  {isAdmin ? (
+                    <NoTimesFix date={date} onFixed={d => setNoTimesDays(prev => prev.filter(x => x !== d))} />
+                  ) : (
+                    <p className="text-xs text-gray-400 py-1">Only Rawlings or the owner can add times.</p>
+                  )}
+                </FixRow>
+              ))}
+            </div>
+          )
+        }
+      </div>
     </div>
   )
 }
 
-// ── NO TIMES TAB ──────────────────────────────────────────────────────────────
+// ── NO TIMES FIX (used inside ViolationsTab) ──────────────────────────────────
 
 function FixRow({ label, sub, children }: { label: string; sub?: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(false)
@@ -997,35 +1028,7 @@ function NoTimesFix({ date, onFixed }: { date: string; onFixed: (d: string) => v
   )
 }
 
-function NoTimesTab() {
-  const [noStaffTimes, setNoStaffTimes] = useState<any[] | null>(null)
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetch('/api/flags')
-      .then(r => r.ok ? r.json() : Promise.reject(r.status))
-      .then(d => { setNoStaffTimes(d.noStaffTimes ?? []); setLoading(false) })
-      .catch(() => { setNoStaffTimes([]); setLoading(false) })
-  }, [])
-
-  if (loading || !noStaffTimes) return <div className="py-10 text-center text-gray-400">Loading…</div>
-
-  return (
-    <div>
-      <p className="text-[10px] text-gray-400 px-1 mb-1">{noStaffTimes.length} day{noStaffTimes.length !== 1 ? 's' : ''} with no staff times recorded (excluding Sundays)</p>
-      {noStaffTimes.length === 0
-        ? <p className="py-4 text-center text-gray-400 text-xs">All working days have staff times recorded.</p>
-        : <div className="bg-white border border-gray-200 rounded-lg overflow-hidden divide-y divide-gray-100">
-            {noStaffTimes.map((r: any) => (
-              <NoTimesFix key={r.missing_date} date={r.missing_date} onFixed={d =>
-                setNoStaffTimes(prev => prev ? prev.filter((x: any) => x.missing_date !== d) : prev)
-              } />
-            ))}
-          </div>
-      }
-    </div>
-  )
-}
 
 function RoleTab({ role }: { role: string }) {
   const [users, setUsers] = useState<AppUser[]>([])
@@ -1795,9 +1798,8 @@ function StaffClientInner({ role, username, embedded }: { role: string; username
 
       {tab === 'Times' && <TimesTab username={username} role={role} />}
       {tab === 'Payslips' && <PayslipsTab />}
-      {tab === 'Violations' && <ViolationsTab role={role} />}
+      {tab === 'Violations' && <ViolationsTab role={role} username={username} />}
       {tab === 'Role' && <RoleTab role={role} />}
-      {tab === 'No Times' && <NoTimesTab />}
       {tab === 'Rota' && <RotaTab />}
       {tab === 'Analytics' && <AnalyticsTab />}
       {tab === 'Assignments' && <AssignmentsTab role={role} />}
