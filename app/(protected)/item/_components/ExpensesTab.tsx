@@ -158,7 +158,7 @@ export default function ExpensesTab({ search }: Props) {
             <tr>
               <th className="text-left px-1 py-1 font-semibold text-gray-500 border-b border-gray-200 whitespace-nowrap">DATE</th>
               <th className="text-left px-1 py-1 font-semibold text-gray-500 border-b border-gray-200">ACCOUNT</th>
-              <th className="text-left px-1 py-1 font-semibold text-gray-500 border-b border-gray-200">DESCRIPTION</th>
+              <th className="text-left px-1 py-1 font-semibold text-gray-500 border-b border-gray-200">JUSTIFY</th>
               <th className="text-left px-1 py-1 font-semibold text-gray-500 border-b border-gray-200">VENDOR</th>
               <th className="text-right px-1 py-1 font-semibold text-gray-500 border-b border-gray-200">AMT</th>
               <th className="text-left px-1 py-1 font-semibold text-gray-500 border-b border-gray-200">BY</th>
