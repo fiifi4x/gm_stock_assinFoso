@@ -364,6 +364,43 @@ export default function ItemsTab({ items, group, productType, search, violation,
     return list
   }, [items, group, productType, search, violation])
 
+  useEffect(() => {
+    const rightPane = rightPaneRef.current
+    if (!rightPane) return
+    function onScroll() {
+      if (scrollingFromClick.current) return
+      const paneTop = rightPane!.getBoundingClientRect().top
+      const titleBars = rightPane!.querySelectorAll<HTMLElement>('[data-item-id]')
+      let best: HTMLElement | null = null
+      for (const el of titleBars) {
+        const top = el.getBoundingClientRect().top - paneTop
+        if (top <= 60) best = el
+        else break
+      }
+      if (!best) return
+      const id = Number(best.dataset.itemId)
+      if (!id || id === selectedIdRef.current) return
+      selectedIdRef.current = id
+      setSelectedId(id)
+      const leftPane = leftPaneRef.current
+      const leftEl = leftPane?.querySelector<HTMLElement>(`[data-left-item="${id}"]`)
+      if (leftEl && leftPane) {
+        const lPaneTop = leftPane.getBoundingClientRect().top
+        const elTop = leftEl.getBoundingClientRect().top
+        leftPane.scrollBy({ top: elTop - lPaneTop - leftPane.clientHeight / 2, behavior: 'smooth' })
+      }
+    }
+    rightPane.addEventListener('scroll', onScroll, { passive: true })
+    return () => rightPane.removeEventListener('scroll', onScroll)
+  }, [filteredItems])
+
+  const serviceViolations = useMemo(() => {
+    if (!lossSummary) return []
+    return lossSummary.filter((r: any) =>
+      r.product_type === 'service' && (Number(r.cnt) !== 0 || Number(r.gmc) !== 0 || Number(r.bl) !== 0)
+    )
+  }, [lossSummary])
+
   const activeDups = flags ? flags.duplicates.filter((r: any) => {
     const lo = Math.min(r.id1, r.id2), hi = Math.max(r.id1, r.id2)
     return !dismissed.has(`${lo}-${hi}`)
@@ -508,14 +545,6 @@ export default function ItemsTab({ items, group, productType, search, violation,
     )
   }
 
-  // Flags panels (violation = no_group | duplicates | inv_todo | inv_done)
-  const serviceViolations = useMemo(() => {
-    if (!lossSummary) return []
-    return lossSummary.filter((r: any) =>
-      r.product_type === 'service' && (Number(r.cnt) !== 0 || Number(r.gmc) !== 0 || Number(r.bl) !== 0)
-    )
-  }, [lossSummary])
-
   if (violation === 'service_violation') {
     return (
       <div className="flex-1 overflow-y-auto min-h-0 py-2 h-full">
@@ -591,36 +620,6 @@ export default function ItemsTab({ items, group, productType, search, violation,
       </div>
     )
   }
-
-  useEffect(() => {
-    const rightPane = rightPaneRef.current
-    if (!rightPane) return
-    function onScroll() {
-      if (scrollingFromClick.current) return
-      const paneTop = rightPane!.getBoundingClientRect().top
-      const titleBars = rightPane!.querySelectorAll<HTMLElement>('[data-item-id]')
-      let best: HTMLElement | null = null
-      for (const el of titleBars) {
-        const top = el.getBoundingClientRect().top - paneTop
-        if (top <= 60) best = el
-        else break
-      }
-      if (!best) return
-      const id = Number(best.dataset.itemId)
-      if (!id || id === selectedIdRef.current) return
-      selectedIdRef.current = id
-      setSelectedId(id)
-      const leftPane = leftPaneRef.current
-      const leftEl = leftPane?.querySelector<HTMLElement>(`[data-left-item="${id}"]`)
-      if (leftEl && leftPane) {
-        const lPaneTop = leftPane.getBoundingClientRect().top
-        const elTop = leftEl.getBoundingClientRect().top
-        leftPane.scrollBy({ top: elTop - lPaneTop - leftPane.clientHeight / 2, behavior: 'smooth' })
-      }
-    }
-    rightPane.addEventListener('scroll', onScroll, { passive: true })
-    return () => rightPane.removeEventListener('scroll', onScroll)
-  }, [filteredItems])
 
   if (lossLoading) return <div className="py-20 text-center text-gray-400 text-xs">Loading…</div>
 
