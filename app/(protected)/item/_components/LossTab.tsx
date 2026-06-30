@@ -337,30 +337,27 @@ export default function LossTab({ onOpenItem: _onOpenItem, search = '', group = 
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      {/* Table — no horizontal scroll, table-fixed fills width */}
-      <div className="flex-1 min-h-0 overflow-y-auto rounded-xl border border-gray-200 bg-white">
-        <table className="w-full table-fixed border-collapse text-[8px]">
+      {/* Table — horizontal scroll allowed; Item column frozen */}
+      <div className="flex-1 min-h-0 overflow-auto rounded-xl border border-gray-200 bg-white">
+        <table className="border-collapse text-[8px] min-w-max">
           <colgroup>
-            {/* Item: 24%, then 10 data cols share 76% ≈ 7.6% each */}
-            <col style={{width:'24%'}} />
-            <col style={{width:'11%'}} />
-            <col style={{width:'6%'}} />
-            <col style={{width:'5%'}} />
-            <col style={{width:'7%'}} />
-            <col style={{width:'7%'}} />
-            <col style={{width:'6%'}} />
-            <col style={{width:'6%'}} />
-            <col style={{width:'6%'}} />
-            <col style={{width:'6%'}} />
-            <col style={{width:'7%'}} />
-            <col style={{width:'6%'}} />
-            <col style={{width:'5%'}} />
+            <col style={{width:'140px'}} />
+            <col style={{width:'56px'}} />
+            <col style={{width:'40px'}} />
+            <col style={{width:'48px'}} />
+            <col style={{width:'48px'}} />
+            <col style={{width:'40px'}} />
+            <col style={{width:'40px'}} />
+            <col style={{width:'40px'}} />
+            <col style={{width:'48px'}} />
+            <col style={{width:'40px'}} />
+            <col style={{width:'70px'}} />
+            <col style={{width:'48px'}} />
+            <col style={{width:'30px'}} />
           </colgroup>
-          <thead className="sticky top-0 z-10">
+          <thead className="sticky top-0 z-20">
             <tr className="bg-gray-50 border-b border-gray-200">
-              <SortTh label="Item" col="item_name" sort={sort} onSort={handleSort} cls="text-left pl-1.5" />
-              <SortTh label="Group" col="cf_group" {...thProps} cls="text-left" />
-              <SortTh label="Type" col="product_type" {...thProps} cls="text-center" />
+              <SortTh label="Item" col="item_name" sort={sort} onSort={handleSort} cls="text-left pl-1.5 sticky left-0 z-30 bg-gray-50 border-r border-gray-200" />
               <SortTh label="₵L/G" col="lgAmt" {...thProps} cls="text-center" />
               <SortTh label="L/G" col="lgQty" {...thProps} cls="text-center" />
               <SortTh label="CNT" col="cnt" {...thProps} cls="text-center" />
@@ -370,6 +367,8 @@ export default function LossTab({ onOpenItem: _onOpenItem, search = '', group = 
               <SortTh label="SOH" col="soh" {...thProps} cls="text-center" />
               <SortTh label="SP" col="sp" {...thProps} cls="text-center" />
               <SortTh label="CP" col="cp" {...thProps} cls="text-center" />
+              <SortTh label="Group" col="cf_group" {...thProps} cls="text-left" />
+              <SortTh label="Type" col="product_type" {...thProps} cls="text-center" />
               <th className={`${thBase} text-center text-gray-400`}>▸</th>
             </tr>
           </thead>
@@ -387,11 +386,7 @@ export default function LossTab({ onOpenItem: _onOpenItem, search = '', group = 
                   onClick={() => setExpandedId(isOpen ? null : row.item_id)}
                   className={`cursor-pointer border-b border-gray-100 transition
                     ${isOpen ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
-                  <td className="pl-1.5 py-0.5 font-semibold text-gray-900 truncate overflow-hidden">{row.item_name}</td>
-                  <td className="py-0.5 text-gray-500 truncate overflow-hidden">{row.cf_group ?? '—'}</td>
-                  <td className={`text-center py-0.5 font-semibold ${row.product_type === 'service' ? 'text-purple-500' : 'text-teal-600'}`}>
-                    {row.product_type === 'service' ? 'Svc' : 'Good'}
-                  </td>
+                  <td className={`pl-1.5 py-0.5 font-semibold text-gray-900 truncate overflow-hidden sticky left-0 z-10 border-r border-gray-200 ${isOpen ? 'bg-blue-50' : 'bg-white'}`}>{row.item_name}</td>
                   <td className={`text-center py-0.5 font-bold tabular-nums ${lossAmt ? 'text-red-600' : gainAmt ? 'text-green-600' : 'text-gray-300'}`}>
                     {fmtAmt(row.lgAmt)}
                   </td>
@@ -407,6 +402,10 @@ export default function LossTab({ onOpenItem: _onOpenItem, search = '', group = 
                   </td>
                   <td className="text-center py-0.5 text-blue-600 tabular-nums">{fmtCcy(row.sp)}</td>
                   <td className="text-center py-0.5 text-green-600 tabular-nums">{fmtCcy(row.cp)}</td>
+                  <td className="py-0.5 text-gray-500 truncate overflow-hidden">{row.cf_group ?? '—'}</td>
+                  <td className={`text-center py-0.5 font-semibold ${row.product_type === 'service' ? 'text-purple-500' : 'text-teal-600'}`}>
+                    {row.product_type === 'service' ? 'Svc' : 'Good'}
+                  </td>
                   <td className="text-center py-0.5 text-gray-400">{isOpen ? '▾' : '▸'}</td>
                 </tr>
                 {isOpen && (
