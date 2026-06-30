@@ -55,6 +55,23 @@ export async function GET(_req: Request, { params }: { params: Promise<{ itemId:
       WHERE srl.item_id = ${id} AND srl.item_price IS NOT NULL
         AND (sr.customer_name IS NULL OR sr.customer_name <> 'Grony Multimedia as Customer')
       GROUP BY sr.receipt_date::date
+    ),
+    daily_aliases AS (
+      SELECT d, STRING_AGG(DISTINCT alias, ' / ' ORDER BY alias) AS aliases
+      FROM (
+        SELECT sr.receipt_date::date AS d, srl.raw_item_name AS alias
+        FROM sales_receipt_lines srl
+        JOIN sales_receipts sr ON sr.id = srl.receipt_id
+        WHERE srl.item_id = ${id}
+          AND srl.raw_item_name IS NOT NULL AND TRIM(srl.raw_item_name) <> ''
+        UNION ALL
+        SELECT b.bill_date::date AS d, bl.raw_item_name AS alias
+        FROM bill_lines bl
+        JOIN bills b ON b.id = bl.bill_id
+        WHERE bl.item_id = ${id}
+          AND bl.raw_item_name IS NOT NULL AND TRIM(bl.raw_item_name) <> ''
+      ) sub
+      GROUP BY d
     )
     SELECT
       ad.d::text AS date,
@@ -62,13 +79,15 @@ export async function GET(_req: Request, { params }: { params: Promise<{ itemId:
       dw.qty  AS wic_qty,
       dg.qty  AS gmc_qty,
       db.qty  AS bills_qty,
-      dsp.sp  AS sell_price
+      dsp.sp  AS sell_price,
+      da.aliases
     FROM all_dates ad
     LEFT JOIN daily_counts dc ON dc.d = ad.d
     LEFT JOIN daily_wic    dw ON dw.d = ad.d
     LEFT JOIN daily_gmc    dg ON dg.d = ad.d
     LEFT JOIN daily_bills  db ON db.d = ad.d
     LEFT JOIN daily_sp    dsp ON dsp.d = ad.d
+    LEFT JOIN daily_aliases da ON da.d = ad.d
     ORDER BY ad.d ASC
   `
 

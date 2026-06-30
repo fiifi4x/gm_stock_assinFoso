@@ -26,6 +26,7 @@ type DayRow = {
   gmc_qty: string | null
   bills_qty: string | null
   sell_price: string | null
+  aliases: string | null
 }
 type ComputedRow = DayRow & { expected_soh: number | null; loss: number | null }
 
@@ -214,19 +215,20 @@ function ItemDetail({ item, groups, onSaved }: { item: SummaryRow; groups: strin
       ) : (
         <table className="w-full table-fixed border-collapse text-[8px]">
           <colgroup>
+            <col style={{width:'17%'}} />
             <col style={{width:'22%'}} />
-            <col style={{width:'12%'}} />
             <col style={{width:'10%'}} />
-            <col style={{width:'10%'}} />
-            <col style={{width:'9%'}} />
-            <col style={{width:'9%'}} />
-            <col style={{width:'10%'}} />
-            <col style={{width:'9%'}} />
-            <col style={{width:'9%'}} />
+            <col style={{width:'8%'}} />
+            <col style={{width:'8%'}} />
+            <col style={{width:'7%'}} />
+            <col style={{width:'7%'}} />
+            <col style={{width:'7%'}} />
+            <col style={{width:'7%'}} />
+            <col style={{width:'7%'}} />
           </colgroup>
           <thead>
             <tr className="bg-amber-400 text-gray-800 font-bold">
-              {['DATE','₵','L/G','CNT','WIC','GMC','SP','BL','EXP'].map((h,i) => (
+              {['DATE','ALIAS','₵','L/G','CNT','WIC','GMC','SP','BL','EXP'].map((h,i) => (
                 <th key={h} className={`py-0.5 border-b-2 border-gray-400 ${i > 0 ? 'text-center border-l border-gray-400' : 'text-left pl-1'}`}>{h}</th>
               ))}
             </tr>
@@ -237,6 +239,9 @@ function ItemDetail({ item, groups, onSaved }: { item: SummaryRow; groups: strin
               return (
                 <tr key={i} className={`border-b border-gray-200 ${row.loss !== null && row.loss > 0.001 ? 'bg-red-50' : ''}`}>
                   <td className="pl-1 py-0.5 font-bold text-gray-500 whitespace-nowrap overflow-hidden">{fmtDate(row.date)}</td>
+                  <td className="pl-1 py-0.5 border-l border-gray-300 text-purple-700 font-semibold overflow-hidden">
+                    <span className="block truncate" title={row.aliases ?? ''}>{row.aliases ?? <span className="text-gray-300">—</span>}</span>
+                  </td>
                   <td className="text-center py-0.5 font-bold border-l border-gray-300">
                     {lossVal === null ? <span className="text-gray-300">—</span>
                       : lossVal > 0.01 ? <span className="text-red-600">-{fmtN(lossVal)}</span>
@@ -264,7 +269,7 @@ function ItemDetail({ item, groups, onSaved }: { item: SummaryRow; groups: strin
               <td className="pl-1 py-0.5 text-gray-500">Total</td>
               <td className={lgCls}>{totalCost > 0.01 ? `-₵${fmtN(totalCost)}` : totalCost < -0.01 ? `+₵${fmtN(Math.abs(totalCost))}` : '0'}</td>
               <td className={lgCls}>{totalLoss > 0.001 ? `-${fmtN(totalLoss)}` : totalLoss < -0.001 ? `+${fmtN(Math.abs(totalLoss))}` : '0'}</td>
-              <td colSpan={6} />
+              <td colSpan={7} />
             </tr>
           </tfoot>
         </table>
