@@ -30,7 +30,7 @@ type DayRow = {
 }
 type ComputedRow = DayRow & { expected_soh: number | null; loss: number | null }
 
-type SortCol = 'item_name' | 'lgAmt' | 'lgQty' | 'cnt' | 'wic' | 'gmc' | 'bl' | 'soh' | 'sp' | 'cp'
+type SortCol = 'item_name' | 'cf_group' | 'product_type' | 'lgAmt' | 'lgQty' | 'cnt' | 'wic' | 'gmc' | 'bl' | 'soh' | 'sp' | 'cp'
 type SortDir = 'asc' | 'desc'
 
 const EMPTY_FORM = { item_name: '', cf_group: '', selling_rate: '', purchase_rate: '', units_per_pack: '', unit_name: '' }
@@ -88,6 +88,8 @@ function computeRows(rows: DayRow[]): ComputedRow[] {
 function rowSortVal(row: SummaryRow, col: SortCol): number | string {
   switch (col) {
     case 'item_name': return row.item_name.toLowerCase()
+    case 'cf_group': return (row.cf_group ?? '').toLowerCase()
+    case 'product_type': return (row.product_type ?? '').toLowerCase()
     case 'lgAmt': return row.lgAmt
     case 'lgQty': return row.lgQty
     case 'cnt': return row.cnt
@@ -342,19 +344,23 @@ export default function LossTab({ onOpenItem: _onOpenItem, search = '', group = 
             {/* Item: 24%, then 10 data cols share 76% ≈ 7.6% each */}
             <col style={{width:'24%'}} />
             <col style={{width:'11%'}} />
-            <col style={{width:'8%'}} />
-            <col style={{width:'8%'}} />
+            <col style={{width:'6%'}} />
+            <col style={{width:'5%'}} />
             <col style={{width:'7%'}} />
-            <col style={{width:'7%'}} />
-            <col style={{width:'7%'}} />
-            <col style={{width:'7%'}} />
-            <col style={{width:'8%'}} />
             <col style={{width:'7%'}} />
             <col style={{width:'6%'}} />
+            <col style={{width:'6%'}} />
+            <col style={{width:'6%'}} />
+            <col style={{width:'6%'}} />
+            <col style={{width:'7%'}} />
+            <col style={{width:'6%'}} />
+            <col style={{width:'5%'}} />
           </colgroup>
           <thead className="sticky top-0 z-10">
             <tr className="bg-gray-50 border-b border-gray-200">
               <SortTh label="Item" col="item_name" sort={sort} onSort={handleSort} cls="text-left pl-1.5" />
+              <SortTh label="Group" col="cf_group" {...thProps} cls="text-left" />
+              <SortTh label="Type" col="product_type" {...thProps} cls="text-center" />
               <SortTh label="₵L/G" col="lgAmt" {...thProps} cls="text-center" />
               <SortTh label="L/G" col="lgQty" {...thProps} cls="text-center" />
               <SortTh label="CNT" col="cnt" {...thProps} cls="text-center" />
@@ -369,7 +375,7 @@ export default function LossTab({ onOpenItem: _onOpenItem, search = '', group = 
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={11} className="py-10 text-center text-gray-400 text-[9px]">No items</td></tr>
+              <tr><td colSpan={13} className="py-10 text-center text-gray-400 text-[9px]">No items</td></tr>
             )}
             {filtered.map(row => {
               const lossAmt = row.lgAmt > 0, gainAmt = row.lgAmt < 0
@@ -382,6 +388,10 @@ export default function LossTab({ onOpenItem: _onOpenItem, search = '', group = 
                   className={`cursor-pointer border-b border-gray-100 transition
                     ${isOpen ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
                   <td className="pl-1.5 py-0.5 font-semibold text-gray-900 truncate overflow-hidden">{row.item_name}</td>
+                  <td className="py-0.5 text-gray-500 truncate overflow-hidden">{row.cf_group ?? '—'}</td>
+                  <td className={`text-center py-0.5 font-semibold ${row.product_type === 'service' ? 'text-purple-500' : 'text-teal-600'}`}>
+                    {row.product_type === 'service' ? 'Svc' : 'Good'}
+                  </td>
                   <td className={`text-center py-0.5 font-bold tabular-nums ${lossAmt ? 'text-red-600' : gainAmt ? 'text-green-600' : 'text-gray-300'}`}>
                     {fmtAmt(row.lgAmt)}
                   </td>
@@ -401,7 +411,7 @@ export default function LossTab({ onOpenItem: _onOpenItem, search = '', group = 
                 </tr>
                 {isOpen && (
                   <tr key={`${row.item_id}-d`}>
-                    <td colSpan={11} className="px-1 pb-2 pt-0.5 bg-blue-50">
+                    <td colSpan={13} className="px-1 pb-2 pt-0.5 bg-blue-50">
                       <ItemDetail item={row} groups={groupNames} onSaved={u => patchRow(row.item_id, u)} />
                     </td>
                   </tr>
