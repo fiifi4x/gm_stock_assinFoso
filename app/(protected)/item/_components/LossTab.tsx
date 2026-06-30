@@ -292,11 +292,33 @@ export default function LossTab({ onOpenItem: _onOpenItem, search = '', group = 
   const [sort, setSort] = useState<{ col: SortCol; dir: SortDir }>({ col: 'lgAmt', dir: 'desc' })
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [aliasMap, setAliasMap] = useState<Record<number, string>>({})
+  const [matchMap, setMatchMap] = useState<Record<string, string>>({})
 
   useEffect(() => {
     fetch('/api/losses/summary').then(r => r.json())
       .then(d => { setRows(Array.isArray(d) ? d : []); setLoading(false) })
       .catch(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/good-service-matches').then(r => r.json())
+      .then((d: { good_name: string; service_name: string }[]) => {
+        if (!Array.isArray(d)) return
+        // Bidirectional: a Good's key collects its Services, a Service's key collects its Goods
+        const acc: Record<string, Set<string>> = {}
+        for (const { good_name, service_name } of d) {
+          const gk = good_name.trim().toLowerCase()
+          const sk = service_name.trim().toLowerCase()
+          if (!acc[gk]) acc[gk] = new Set()
+          acc[gk].add(service_name.trim())
+          if (!acc[sk]) acc[sk] = new Set()
+          acc[sk].add(good_name.trim())
+        }
+        const map: Record<string, string> = {}
+        for (const k in acc) map[k] = Array.from(acc[k]).join(', ')
+        setMatchMap(map)
+      })
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -370,6 +392,7 @@ export default function LossTab({ onOpenItem: _onOpenItem, search = '', group = 
             <col style={{width:'22px'}} />
             <col style={{width:'18px'}} />
             <col style={{width:'220px'}} />
+            <col style={{width:'220px'}} />
           </colgroup>
           <thead className="sticky top-0 z-20">
             <tr className="bg-gray-50">
@@ -387,11 +410,12 @@ export default function LossTab({ onOpenItem: _onOpenItem, search = '', group = 
               <SortTh label="Typ" col="product_type" {...thProps} cls="text-center" />
               <th className={`${thBase} text-center text-gray-400`}>▸</th>
               <th className={`${thBase} text-left pl-1.5`}>Aliases</th>
+              <th className={`${thBase} text-left pl-1.5`}>Matches</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={14} className="py-10 text-center text-gray-400 text-[9px]">No items</td></tr>
+              <tr><td colSpan={15} className="py-10 text-center text-gray-400 text-[9px]">No items</td></tr>
             )}
             {filtered.map(row => {
               const lossAmt = row.lgAmt > 0, gainAmt = row.lgAmt < 0
@@ -429,10 +453,14 @@ export default function LossTab({ onOpenItem: _onOpenItem, search = '', group = 
                   <td className="pl-1.5 py-0.5 font-bold text-gray-500 truncate overflow-hidden border border-black" title={aliasMap[row.item_id]}>
                     {aliasMap[row.item_id] || '—'}
                   </td>
+                  <td className="pl-1.5 py-0.5 font-bold text-gray-500 truncate overflow-hidden border border-black"
+                    title={matchMap[row.item_name.trim().toLowerCase()]}>
+                    {matchMap[row.item_name.trim().toLowerCase()] || '—'}
+                  </td>
                 </tr>
                 {isOpen && (
                   <tr key={`${row.item_id}-d`}>
-                    <td colSpan={14} className="px-1 pb-2 pt-0.5 bg-blue-50">
+                    <td colSpan={15} className="px-1 pb-2 pt-0.5 bg-blue-50">
                       <ItemDetail item={row} groups={groupNames} onSaved={u => patchRow(row.item_id, u)} />
                     </td>
                   </tr>
