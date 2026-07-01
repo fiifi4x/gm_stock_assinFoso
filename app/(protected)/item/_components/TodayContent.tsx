@@ -1,9 +1,222 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { fmtDate } from '@/lib/fmtDate'
 import { usePolling } from '@/lib/usePolling'
 import DayBookFeed from '@/components/DayBookFeed'
+
+// ─── Announcements ────────────────────────────────────────────────────────────
+type Announcement = { id: number; author: string; body: string; media_urls: string[]; created_at: string }
+type MediaFile = { file: File; localUrl: string; uploading: boolean; url?: string; error?: string }
+
+function fmtAnnTime(iso: string) {
+  try {
+    const d = new Date(iso)
+    const now = new Date()
+    const diffMs = now.getTime() - d.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    if (diffMins < 1) return 'just now'
+    if (diffMins < 60) return `${diffMins}m ago`
+    const diffHrs = Math.floor(diffMins / 60)
+    if (diffHrs < 24) return `${diffHrs}h ago`
+    const diffDays = Math.floor(diffHrs / 24)
+    return `${diffDays}d ago`
+  } catch { return '' }
+}
+
+function isVideo(url: string) {
+  return /\.(mp4|mov|webm|3gp)$/i.test(url) || url.includes('video')
+}
+
+function MediaGrid({ urls }: { urls: string[] }) {
+  if (!urls.length) return null
+  return (
+    <div className={`grid gap-1 mt-2 ${urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+      {urls.map((url, i) => (
+        isVideo(url) ? (
+          <video key={i} src={url} controls className="w-full rounded-lg max-h-64 object-cover bg-black" />
+        ) : (
+          <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={url} alt="" className="w-full rounded-lg max-h-64 object-cover" />
+          </a>
+        )
+      ))}
+    </div>
+  )
+}
+
+function AnnouncementsPanel() {
+  const [posts, setPosts] = useState<Announcement[]>([])
+  const [body, setBody] = useState('')
+  const [media, setMedia] = useState<MediaFile[]>([])
+  const [posting, setPosting] = useState(false)
+  const [error, setError] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function load() {
+    fetch('/api/announcements')
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d)) setPosts(d) })
+      .catch(() => {})
+  }
+
+  useEffect(() => { load() }, [])
+  usePolling(load, 15000)
+
+  async function handleFiles(files: FileList | null) {
+    if (!files) return
+    const newItems: MediaFile[] = Array.from(files).map(file => ({
+      file, localUrl: URL.createObjectURL(file), uploading: true,
+    }))
+    setMedia(prev => [...prev, ...newItems])
+
+    for (const item of newItems) {
+      const fd = new FormData()
+      fd.append('file', item.file)
+      try {
+        const res = await fetch('/api/announcements/upload', { method: 'POST', body: fd })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error ?? 'Upload failed')
+        setMedia(prev => prev.map(m =>
+          m.localUrl === item.localUrl ? { ...m, uploading: false, url: data.url } : m
+        ))
+      } catch (e: any) {
+        setMedia(prev => prev.map(m =>
+          m.localUrl === item.localUrl ? { ...m, uploading: false, error: e.message } : m
+        ))
+      }
+    }
+  }
+
+  function removeMedia(localUrl: string) {
+    setMedia(prev => prev.filter(m => m.localUrl !== localUrl))
+  }
+
+  async function handlePost() {
+    const stillUploading = media.some(m => m.uploading)
+    if (stillUploading) { setError('Still uploading, please wait…'); return }
+    const failedUploads = media.filter(m => m.error)
+    if (failedUploads.length) { setError('Some files failed to upload. Remove them and try again.'); return }
+    if (!body.trim() && media.length === 0) { setError('Add a message or media.'); return }
+
+    setPosting(true)
+    setError('')
+    try {
+      const urls = media.map(m => m.url!).filter(Boolean)
+      const res = await fetch('/api/announcements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: body.trim(), media_urls: urls }),
+      })
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? 'Failed') }
+      setBody('')
+      setMedia([])
+      load()
+    } catch (e: any) {
+      setError(e.message ?? 'Something went wrong')
+    } finally {
+      setPosting(false)
+    }
+  }
+
+  const canPost = !posting && (body.trim().length > 0 || media.length > 0) && !media.some(m => m.uploading)
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      <div className="px-4 py-3 border-b border-gray-100">
+        <p className="text-sm font-semibold text-gray-700">📢 Announcements</p>
+        <p className="text-xs text-gray-400 mt-0.5">Share info with the team — replaces the WhatsApp group</p>
+      </div>
+
+      {/* Compose */}
+      <div className="px-4 py-3 border-b border-gray-100 space-y-2">
+        <textarea
+          value={body}
+          onChange={e => setBody(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handlePost() }}
+          rows={3}
+          placeholder="Write an announcement…"
+          className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+        />
+
+        {/* Media previews */}
+        {media.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {media.map(m => (
+              <div key={m.localUrl} className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
+                {isVideo(m.file.type) ? (
+                  <video src={m.localUrl} className="w-full h-full object-cover" />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={m.localUrl} alt="" className="w-full h-full object-cover" />
+                )}
+                {m.uploading && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                    <span className="text-white text-[10px] font-semibold">uploading…</span>
+                  </div>
+                )}
+                {m.error && (
+                  <div className="absolute inset-0 bg-red-500/70 flex items-center justify-center">
+                    <span className="text-white text-[10px] font-semibold text-center px-1">{m.error}</span>
+                  </div>
+                )}
+                <button
+                  onClick={() => removeMedia(m.localUrl)}
+                  className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/60 text-white text-xs flex items-center justify-center leading-none"
+                >×</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {error && <p className="text-xs text-red-500">{error}</p>}
+
+        <div className="flex items-center justify-between gap-2">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-blue-600 px-2 py-1.5 rounded-lg hover:bg-blue-50 transition"
+          >
+            📎 Photo / Video
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,video/*"
+            multiple
+            className="hidden"
+            onChange={e => handleFiles(e.target.files)}
+          />
+          <button
+            onClick={handlePost}
+            disabled={!canPost}
+            className="bg-blue-600 hover:bg-blue-500 active:bg-blue-700 disabled:opacity-40 text-white text-xs font-semibold px-4 py-1.5 rounded-lg transition"
+          >
+            {posting ? 'Posting…' : 'Post'}
+          </button>
+        </div>
+      </div>
+
+      {/* Feed */}
+      {posts.length === 0 ? (
+        <p className="text-xs text-gray-400 text-center py-6">No announcements yet.</p>
+      ) : (
+        <div className="divide-y divide-gray-50">
+          {posts.map(p => (
+            <div key={p.id} className="px-4 py-3 space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-gray-700 capitalize">{p.author}</span>
+                <span className="text-[11px] text-gray-400 shrink-0">{fmtAnnTime(p.created_at)}</span>
+              </div>
+              {p.body && <p className="text-sm text-gray-800 whitespace-pre-wrap">{p.body}</p>}
+              <MediaGrid urls={p.media_urls ?? []} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 const fmt = (v: any) => `₵${Number(v ?? 0).toLocaleString('en-GH', { maximumFractionDigits: 0 })}`
 
@@ -257,6 +470,8 @@ export default function TodayPage() {
           </div>
         )}
       </div>
+
+      <AnnouncementsPanel />
 
       <div className="pt-2 border-t border-gray-200">
         <DayBookFeed />
