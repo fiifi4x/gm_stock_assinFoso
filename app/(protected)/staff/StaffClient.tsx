@@ -685,109 +685,377 @@ function TimesTab({ username, role }: { username: string; role: string }) {
 
 // ── PAYSLIPS TAB ──────────────────────────────────────────────────────────────
 
-function fmt(v: string | null) {
+type StaffProfile = {
+  id: number; staff_name: string; full_name: string | null; start_date: string | null
+  date_of_birth: string | null; ghana_card: string | null; ssnit_number: string | null
+  phone: string | null; address: string | null; bank_name: string | null
+  bank_account: string | null; momo_number: string | null
+}
+
+function fmtC(v: string | null | undefined) {
   if (!v) return '—'
   const n = parseFloat(v)
   return isNaN(n) ? '—' : `₵${n.toFixed(2)}`
 }
-function num(v: string | null) {
+function numF(v: string | null | undefined) {
   if (!v) return '—'
   const n = parseFloat(v)
   return isNaN(n) ? '—' : n.toLocaleString(undefined, { maximumFractionDigits: 2 })
 }
 function monthLabel(d: string) {
   const dt = new Date(d + 'T00:00:00')
+  return dt.toLocaleString('default', { month: 'short', year: '2-digit' })
+}
+function monthLabelFull(d: string) {
+  const dt = new Date(d + 'T00:00:00')
   return dt.toLocaleString('default', { month: 'long', year: 'numeric' })
 }
-function PayRow({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
-  return (
-    <div className="flex justify-between items-center">
-      <span className="text-sm text-gray-500">{label}</span>
-      <span className={`text-sm font-semibold ${highlight ? 'text-gray-900' : 'text-gray-600'}`}>{value}</span>
-    </div>
-  )
-}
+
+const PAY_COLS = [
+  { key: 'hours_worked',     label: 'Hours',  fmt: (v: any) => v ? `${parseFloat(v).toFixed(1)}h` : '—' },
+  { key: 'pay_for_hours',    label: '₵ Hrs',  fmt: fmtC },
+  { key: 'overtime_hours',   label: 'OT h',   fmt: (v: any) => v && parseFloat(v) > 0 ? parseFloat(v).toFixed(1)+'h' : '—' },
+  { key: 'pay_for_overtime', label: '₵ OT',   fmt: fmtC },
+  { key: 'longevity_days',   label: 'L.Days', fmt: numF },
+  { key: 'pay_for_longevity',label: '₵ Long', fmt: fmtC },
+  { key: 'duty_allowance',   label: 'Duty',   fmt: fmtC },
+  { key: 'data_allowance',   label: 'Data',   fmt: fmtC },
+  { key: 'ssnit',            label: 'SSNIT',  fmt: fmtC },
+  { key: 'total_salary',     label: 'TOTAL',  fmt: fmtC },
+] as const
+
+const ALL_STAFF_NAMES = ['Joe', 'Bino', 'James', 'Rawlings', 'Grony']
+
+type PayView = 'monthly' | 'staff' | 'profiles'
 
 function PayslipsTab() {
   const [payslips, setPayslips] = useState<Payslip[]>([])
+  const [profiles, setProfiles] = useState<StaffProfile[]>([])
   const [loading, setLoading] = useState(true)
-  const [selected, setSelected] = useState<Payslip | null>(null)
-  const [staffFilter, setStaffFilter] = useState('All')
+  const [view, setView] = useState<PayView>('monthly')
+  const [selectedMonth, setSelectedMonth] = useState<string>('')
+  const [selectedStaff, setSelectedStaff] = useState<string>('Joe')
+  const [editProfile, setEditProfile] = useState<StaffProfile | null>(null)
+  const [editForm, setEditForm] = useState<Partial<StaffProfile>>({})
+  const [savingProfile, setSavingProfile] = useState(false)
+  const [expandedId, setExpandedId] = useState<number | null>(null)
 
   useEffect(() => {
-    fetch('/api/payslips').then(r => r.json())
-      .then(d => { setPayslips(Array.isArray(d) ? d : []); setLoading(false) })
-      .catch(() => setLoading(false))
+    Promise.all([
+      fetch('/api/payslips').then(r => r.json()).catch(() => []),
+      fetch('/api/staff/profiles').then(r => r.json()).catch(() => []),
+    ]).then(([p, pr]) => {
+      const ps = Array.isArray(p) ? p : []
+      setPayslips(ps)
+      setProfiles(Array.isArray(pr) ? pr : [])
+      // default to most recent month
+      const months = [...new Set(ps.map((x: Payslip) => x.pay_month))].sort()
+      if (months.length) setSelectedMonth(months[months.length - 1])
+      setLoading(false)
+    })
   }, [])
 
-  const staffNames = ['All', ...Array.from(new Set(payslips.map(p => p.staff_name))).sort()]
-  const filtered = staffFilter === 'All' ? payslips : payslips.filter(p => p.staff_name === staffFilter)
+  const months = useMemo(() =>
+    [...new Set(payslips.map(p => p.pay_month))].sort(), [payslips])
+
+  // Monthly view: all staff for selected month
+  const monthlyData = useMemo(() =>
+    ALL_STAFF_NAMES.map(name => payslips.find(p => p.staff_name === name && p.pay_month === selectedMonth) ?? null),
+    [payslips, selectedMonth])
+
+  // Staff view: all months for selected staff
+  const staffData = useMemo(() =>
+    months.map(m => payslips.find(p => p.staff_name === selectedStaff && p.pay_month === m) ?? null),
+    [payslips, months, selectedStaff])
+
+  async function saveProfile() {
+    if (!editProfile) return
+    setSavingProfile(true)
+    const res = await fetch('/api/staff/profiles', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ staff_name: editProfile.staff_name, ...editForm }),
+    })
+    if (res.ok) {
+      const updated = await res.json()
+      setProfiles(prev => prev.map(p => p.staff_name === updated.staff_name ? updated : p))
+      setEditProfile(null)
+    }
+    setSavingProfile(false)
+  }
 
   if (loading) return <div className="py-10 text-center text-gray-400">Loading…</div>
 
+  const viewBtn = (v: PayView, label: string) => (
+    <button key={v} onClick={() => setView(v)}
+      className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition
+        ${view === v ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+      {label}
+    </button>
+  )
+
   return (
     <div className="space-y-4">
-      <div className="flex gap-1.5 overflow-x-auto pb-1">
-        {staffNames.map(s => (
-          <button key={s} onClick={() => setStaffFilter(s)}
-            className={`shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition
-              ${staffFilter === s ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-            {s}
-          </button>
-        ))}
+      {/* View selector */}
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {viewBtn('monthly',  '📅 By Month')}
+        {viewBtn('staff',    '👤 By Staff')}
+        {viewBtn('profiles', '🪪 Profiles')}
       </div>
 
-      {selected && (
-        <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${STAFF_COLORS[selected.staff_name] ?? 'bg-gray-100 text-gray-600'}`}>
-                  {selected.staff_name}
-                </span>
-                <span className="text-base font-bold text-gray-900">{monthLabel(selected.pay_month)}</span>
+      {/* ── MONTHLY VIEW ─────────────────────────────────────────────────────── */}
+      {view === 'monthly' && (
+        <div className="space-y-3">
+          {/* Month selector */}
+          <div className="flex gap-1.5 overflow-x-auto pb-1">
+            {months.map(m => (
+              <button key={m} onClick={() => setSelectedMonth(m)}
+                className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition
+                  ${selectedMonth === m ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                {monthLabel(m)}
+              </button>
+            ))}
+          </div>
+
+          {selectedMonth && (
+            <>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">{monthLabelFull(selectedMonth)}</p>
+
+              {/* Summary cards */}
+              <div className="grid grid-cols-2 gap-2">
+                {monthlyData.map((p, i) => {
+                  const name = ALL_STAFF_NAMES[i]
+                  const color = STAFF_COLORS[name] ?? 'bg-gray-100 text-gray-600'
+                  return (
+                    <button key={name}
+                      onClick={() => setExpandedId(expandedId === i ? null : i)}
+                      className={`text-left rounded-xl border p-3 transition ${expandedId === i ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                      <div className="flex items-center justify-between">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${color}`}>{name}</span>
+                        <span className="text-sm font-bold text-green-700">{fmtC(p?.total_salary)}</span>
+                      </div>
+                      {p && (
+                        <div className="mt-1.5 text-[10px] text-gray-500 space-y-0.5">
+                          <div className="flex justify-between"><span>Hours</span><span className="font-medium text-gray-700">{p.hours_worked ? parseFloat(p.hours_worked).toFixed(1)+'h' : '—'}</span></div>
+                          <div className="flex justify-between"><span>Pay</span><span className="font-medium text-gray-700">{fmtC(p.pay_for_hours)}</span></div>
+                          {p.overtime_hours && parseFloat(p.overtime_hours) > 0 && (
+                            <div className="flex justify-between"><span>OT</span><span className="font-medium text-orange-600">{fmtC(p.pay_for_overtime)}</span></div>
+                          )}
+                          <div className="flex justify-between"><span>Longevity</span><span className="font-medium text-gray-700">{p.longevity_days ? `${p.longevity_days}d / ${fmtC(p.pay_for_longevity)}` : '—'}</span></div>
+                          <div className="flex justify-between"><span>Duty + Data</span><span className="font-medium text-gray-700">{fmtC(p.duty_allowance)} + {fmtC(p.data_allowance)}</span></div>
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
               </div>
-              {selected.payment_period && <p className="text-xs text-gray-400 mt-1">{selected.payment_period}</p>}
+
+              {/* Grand total */}
+              <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 flex justify-between items-center">
+                <span className="text-sm font-bold text-gray-700">Total Salaries & Wages</span>
+                <span className="text-lg font-bold text-green-700">
+                  {fmtC(String(monthlyData.reduce((s, p) => s + (p ? parseFloat(p.total_salary ?? '0') : 0), 0).toFixed(2)))}
+                </span>
+              </div>
+
+              {/* Full comparison table */}
+              <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide px-3 pt-2.5 pb-1">Full Breakdown</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[9px]">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="text-left px-3 py-1.5 text-gray-500 font-bold">Staff</th>
+                        {PAY_COLS.map(c => (
+                          <th key={c.key} className={`text-center px-1 py-1.5 font-bold ${c.key === 'total_salary' ? 'text-green-600' : 'text-gray-400'}`}>{c.label}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {ALL_STAFF_NAMES.map((name, i) => {
+                        const p = monthlyData[i]
+                        const color = STAFF_COLORS[name] ?? 'bg-gray-100 text-gray-600'
+                        return (
+                          <tr key={name} className="hover:bg-gray-50">
+                            <td className="px-3 py-1.5">
+                              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${color}`}>{name}</span>
+                            </td>
+                            {PAY_COLS.map(c => (
+                              <td key={c.key} className={`text-center px-1 py-1.5 tabular-nums ${c.key === 'total_salary' ? 'font-bold text-green-700' : 'text-gray-600'}`}>
+                                {p ? c.fmt((p as any)[c.key]) : '—'}
+                              </td>
+                            ))}
+                          </tr>
+                        )
+                      })}
+                      {/* Totals row */}
+                      <tr className="bg-gray-100 border-t-2 border-gray-300">
+                        <td className="px-3 py-1.5 text-[9px] font-bold text-gray-700">TOTAL</td>
+                        {PAY_COLS.map(c => {
+                          const sum = monthlyData.reduce((s, p) => s + (p ? parseFloat((p as any)[c.key] ?? '0') || 0 : 0), 0)
+                          return (
+                            <td key={c.key} className={`text-center px-1 py-1.5 tabular-nums font-bold ${c.key === 'total_salary' ? 'text-green-700' : 'text-gray-600'}`}>
+                              {sum > 0 ? (c.key.includes('hours') || c.key === 'longevity_days' || c.key === 'overtime_hours' ? sum.toFixed(1) : `₵${sum.toFixed(2)}`) : '—'}
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── STAFF VIEW ────────────────────────────────────────────────────────── */}
+      {view === 'staff' && (
+        <div className="space-y-3">
+          {/* Staff selector */}
+          <div className="flex gap-1.5 overflow-x-auto pb-1">
+            {ALL_STAFF_NAMES.map(name => {
+              const color = STAFF_COLORS[name] ?? 'bg-gray-100 text-gray-600'
+              return (
+                <button key={name} onClick={() => setSelectedStaff(name)}
+                  className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition
+                    ${selectedStaff === name ? color + ' ring-2 ring-blue-400' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                  {name}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Profile quick-view */}
+          {(() => {
+            const prof = profiles.find(p => p.staff_name === selectedStaff)
+            if (!prof) return null
+            return (
+              <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                <div><span className="text-gray-400">Full name: </span><span className="font-medium">{prof.full_name ?? '—'}</span></div>
+                <div><span className="text-gray-400">Started: </span><span className="font-medium">{prof.start_date ?? '—'}</span></div>
+                <div><span className="text-gray-400">Ghana Card: </span><span className="font-medium">{prof.ghana_card ?? '—'}</span></div>
+                <div><span className="text-gray-400">SSNIT: </span><span className="font-medium">{prof.ssnit_number ?? '—'}</span></div>
+                <div><span className="text-gray-400">Phone: </span><span className="font-medium">{prof.phone ?? '—'}</span></div>
+                <div><span className="text-gray-400">MoMo: </span><span className="font-medium">{prof.momo_number ?? '—'}</span></div>
+                <div className="col-span-2"><span className="text-gray-400">Bank: </span><span className="font-medium">{prof.bank_name ? `${prof.bank_name} · ${prof.bank_account ?? ''}` : '—'}</span></div>
+              </div>
+            )
+          })()}
+
+          {/* Monthly history table */}
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-[9px]">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="text-left px-3 py-1.5 text-gray-500 font-bold whitespace-nowrap">Month</th>
+                    {PAY_COLS.map(c => (
+                      <th key={c.key} className={`text-center px-1 py-1.5 font-bold whitespace-nowrap ${c.key === 'total_salary' ? 'text-green-600' : 'text-gray-400'}`}>{c.label}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {months.map((m, i) => {
+                    const p = staffData[i]
+                    return (
+                      <tr key={m} className="hover:bg-gray-50">
+                        <td className="px-3 py-1.5 font-semibold text-gray-700 whitespace-nowrap">{monthLabel(m)}</td>
+                        {PAY_COLS.map(c => (
+                          <td key={c.key} className={`text-center px-1 py-1.5 tabular-nums ${c.key === 'total_salary' ? 'font-bold text-green-700' : 'text-gray-600'}`}>
+                            {p ? c.fmt((p as any)[c.key]) : '—'}
+                          </td>
+                        ))}
+                      </tr>
+                    )
+                  })}
+                  {/* Totals row */}
+                  <tr className="bg-gray-100 border-t-2 border-gray-300">
+                    <td className="px-3 py-1.5 text-[9px] font-bold text-gray-700">TOTAL</td>
+                    {PAY_COLS.map(c => {
+                      const sum = staffData.reduce((s, p) => s + (p ? parseFloat((p as any)[c.key] ?? '0') || 0 : 0), 0)
+                      return (
+                        <td key={c.key} className={`text-center px-1 py-1.5 tabular-nums font-bold ${c.key === 'total_salary' ? 'text-green-700' : 'text-gray-600'}`}>
+                          {sum > 0 ? (c.key.includes('hours') || c.key === 'longevity_days' || c.key === 'overtime_hours' ? sum.toFixed(1) : `₵${sum.toFixed(2)}`) : '—'}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                </tbody>
+              </table>
             </div>
-            <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 text-lg font-bold">×</button>
-          </div>
-          <div className="border-t border-gray-100 pt-3 space-y-2">
-            <PayRow label="Hours worked" value={num(selected.hours_worked)} />
-            <PayRow label="Pay for hours" value={fmt(selected.pay_for_hours)} highlight />
-            <PayRow label="Overtime hours" value={num(selected.overtime_hours)} />
-            <PayRow label="Pay for overtime" value={fmt(selected.pay_for_overtime)} highlight />
-            <PayRow label="Longevity days" value={num(selected.longevity_days)} />
-            <PayRow label="Pay for longevity" value={fmt(selected.pay_for_longevity)} highlight />
-            <PayRow label="Duty allowance" value={fmt(selected.duty_allowance)} highlight />
-            <PayRow label="Data allowance" value={fmt(selected.data_allowance)} highlight />
-            {selected.ssnit && <PayRow label="SSNIT" value={fmt(selected.ssnit)} />}
-          </div>
-          <div className="border-t border-gray-200 pt-3 flex justify-between items-center">
-            <span className="text-sm font-bold text-gray-700">Total Salary</span>
-            <span className="text-xl font-bold text-green-700">{fmt(selected.total_salary)}</span>
           </div>
         </div>
       )}
 
-      <div className="space-y-2">
-        {filtered.length === 0 && <p className="py-10 text-center text-gray-400 text-sm">No payslips found.</p>}
-        {filtered.map(p => (
-          <button key={p.id} onClick={() => setSelected(p === selected ? null : p)}
-            className={`w-full text-left rounded-xl border p-3 transition
-              ${selected?.id === p.id ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className={`shrink-0 text-xs font-semibold px-2.5 py-0.5 rounded-full ${STAFF_COLORS[p.staff_name] ?? 'bg-gray-100 text-gray-600'}`}>
-                  {p.staff_name}
-                </span>
-                <span className="text-sm font-medium text-gray-800 truncate">{monthLabel(p.pay_month)}</span>
+      {/* ── PROFILES VIEW ─────────────────────────────────────────────────────── */}
+      {view === 'profiles' && (
+        <div className="space-y-3">
+          {editProfile && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-bold text-blue-800">{editProfile.staff_name} — Edit Profile</p>
+                <button onClick={() => setEditProfile(null)} className="text-gray-400 text-lg">×</button>
               </div>
-              <span className="shrink-0 text-sm font-bold text-gray-900">{fmt(p.total_salary)}</span>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {[
+                  ['full_name',     'Full Name'],
+                  ['start_date',    'Start Date (YYYY-MM-DD)'],
+                  ['date_of_birth', 'Date of Birth (YYYY-MM-DD)'],
+                  ['ghana_card',    'Ghana Card No.'],
+                  ['ssnit_number',  'SSNIT Number'],
+                  ['phone',         'Phone'],
+                  ['momo_number',   'MoMo Number'],
+                  ['bank_name',     'Bank Name'],
+                  ['bank_account',  'Bank Account No.'],
+                  ['address',       'Address'],
+                ].map(([field, label]) => (
+                  <div key={field} className={field === 'address' ? 'col-span-2' : ''}>
+                    <label className="text-[10px] text-gray-500 mb-0.5 block">{label}</label>
+                    <input
+                      value={(editForm as any)[field] ?? ''}
+                      onChange={e => setEditForm(f => ({ ...f, [field]: e.target.value }))}
+                      placeholder={label}
+                      className="w-full bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-400"
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={saveProfile} disabled={savingProfile}
+                  className="flex-1 bg-blue-600 text-white text-xs font-bold rounded-lg py-2 disabled:opacity-40">
+                  {savingProfile ? 'Saving…' : 'Save Profile'}
+                </button>
+                <button onClick={() => setEditProfile(null)} className="px-4 py-2 bg-gray-100 text-gray-600 text-xs font-semibold rounded-lg">Cancel</button>
+              </div>
             </div>
-            {p.payment_period && <p className="text-xs text-gray-400 mt-1">{p.payment_period}</p>}
-          </button>
-        ))}
-      </div>
+          )}
+
+          {profiles.map(prof => (
+            <div key={prof.staff_name} className="bg-white border border-gray-200 rounded-xl p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${STAFF_COLORS[prof.staff_name] ?? 'bg-gray-100 text-gray-600'}`}>
+                    {prof.staff_name}
+                  </span>
+                  {prof.full_name && <span className="text-sm font-semibold text-gray-800">{prof.full_name}</span>}
+                </div>
+                <button onClick={() => { setEditProfile(prof); setEditForm({ ...prof }) }}
+                  className="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg hover:bg-blue-100">Edit</button>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs border-t border-gray-100 pt-2">
+                <div><span className="text-gray-400">Started: </span><span className="font-medium text-gray-800">{prof.start_date ?? <span className="text-red-400">Not set</span>}</span></div>
+                <div><span className="text-gray-400">DOB: </span><span className="font-medium text-gray-800">{prof.date_of_birth ?? '—'}</span></div>
+                <div><span className="text-gray-400">Ghana Card: </span><span className="font-medium text-gray-800">{prof.ghana_card ?? <span className="text-orange-400">Missing</span>}</span></div>
+                <div><span className="text-gray-400">SSNIT: </span><span className="font-medium text-gray-800">{prof.ssnit_number ?? <span className="text-orange-400">Missing</span>}</span></div>
+                <div><span className="text-gray-400">Phone: </span><span className="font-medium text-gray-800">{prof.phone ?? '—'}</span></div>
+                <div><span className="text-gray-400">MoMo: </span><span className="font-medium text-gray-800">{prof.momo_number ?? '—'}</span></div>
+                <div className="col-span-2"><span className="text-gray-400">Bank: </span><span className="font-medium text-gray-800">{prof.bank_name ? `${prof.bank_name} · ${prof.bank_account ?? ''}` : '—'}</span></div>
+                <div className="col-span-2"><span className="text-gray-400">Address: </span><span className="font-medium text-gray-800">{prof.address ?? '—'}</span></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
