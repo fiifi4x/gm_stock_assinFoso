@@ -450,73 +450,104 @@ function TimesTab({ username, role }: { username: string; role: string }) {
         </div>
       )}
 
-      {/* All records — admin sees flat list with edit/delete; others see compact grid */}
-      {isAdmin ? (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          <table className="w-full text-xs">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left px-3 py-2 text-gray-500 font-semibold">Date</th>
-                <th className="text-left px-3 py-2 text-gray-500 font-semibold">Staff</th>
-                <th className="text-center px-2 py-2 text-green-600 font-semibold">In</th>
-                <th className="text-center px-2 py-2 text-orange-500 font-semibold">Out</th>
-                <th className="text-left px-2 py-2 text-gray-400 font-semibold">By</th>
-                <th className="px-2 py-2" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {allRecords.map(r => (
-                <Fragment key={r.id}>
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{fmtShortDate(r.work_date)}</td>
-                    <td className="px-3 py-2 font-medium capitalize text-gray-900">{r.staff_name}</td>
-                    <td className="px-2 py-2 text-center text-green-700">{r.actual_in ?? <span className="text-gray-300">—</span>}</td>
-                    <td className="px-2 py-2 text-center text-orange-600">{r.actual_out ?? <span className="text-gray-300">—</span>}</td>
-                    <td className="px-2 py-2 text-gray-400">{r.entered_by ?? '—'}</td>
-                    <td className="px-2 py-2">
-                      <div className="flex gap-1 justify-end">
-                        <button onClick={() => { setAdminEditRow(r); setAdminEditIn(r.actual_in ?? ''); setAdminEditOut(r.actual_out ?? '') }}
-                          className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-xs font-semibold hover:bg-blue-100">Edit</button>
-                        <button onClick={() => adminDelete(r)}
-                          className="text-red-500 bg-red-50 px-2 py-0.5 rounded text-xs font-semibold hover:bg-red-100">Del</button>
-                      </div>
-                    </td>
-                  </tr>
-                  {adminEditRow?.id === r.id && (
-                    <tr className="bg-blue-50/60 border-b border-blue-200">
-                      <td colSpan={6} className="px-3 py-2">
-                        <div className="flex items-end gap-2 flex-wrap">
-                          <div>
-                            <p className="text-xs text-gray-400 mb-0.5">Time In</p>
-                            <input value={adminEditIn} onChange={e => setAdminEditIn(e.target.value)}
-                              placeholder="e.g. 8:30am"
-                              className="bg-white border border-gray-200 rounded px-2 py-1 text-xs w-24 outline-none" />
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-400 mb-0.5">Time Out</p>
-                            <input value={adminEditOut} onChange={e => setAdminEditOut(e.target.value)}
-                              placeholder="e.g. 5:00pm"
-                              className="bg-white border border-gray-200 rounded px-2 py-1 text-xs w-24 outline-none" />
-                          </div>
-                          <div className="flex gap-1">
-                            <button onClick={adminSaveEdit} disabled={adminEditSaving}
-                              className="bg-green-600 text-white text-xs font-bold rounded px-3 py-1 disabled:opacity-40">
-                              {adminEditSaving ? '…' : 'Save'}
-                            </button>
-                            <button onClick={() => setAdminEditRow(null)}
-                              className="bg-gray-100 text-gray-600 text-xs font-semibold rounded px-3 py-1">Cancel</button>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
-              ))}
-            </tbody>
-          </table>
-          {allRecords.length === 0 && <p className="py-8 text-center text-gray-400 text-xs">No records yet.</p>}
-        </div>
-      ) : (
+      {/* All records — grouped by date, one row per day, month total bar */}
+      {isAdmin ? (() => {
+        const adminGrouped = groupByDate(allRecords)
+        return (
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <table className="w-full text-[11px] table-fixed">
+              <colgroup>
+                <col style={{width:'22%'}} />
+                {STAFF.map(s => <col key={s} />)}
+              </colgroup>
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="text-left px-1.5 py-2 text-gray-500 font-semibold">Date</th>
+                  {STAFF.map(s => (
+                    <th key={s} className="text-center px-0.5 py-2 text-gray-500 font-semibold capitalize">{s}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {adminGrouped.length === 0 && (
+                  <tr><td colSpan={STAFF.length + 1} className="py-8 text-center text-gray-400">No records yet.</td></tr>
+                )}
+                {adminGrouped.map(([date, map], i) => {
+                  const monthKey = date.slice(0, 7)
+                  const prevMonthKey = adminGrouped[i - 1]?.[0]?.slice(0, 7)
+                  const isMonthStart = prevMonthKey !== monthKey
+                  return (
+                    <Fragment key={date}>
+                      {isMonthStart && (
+                        <tr className="bg-gray-100 border-t-2 border-b-2 border-gray-300">
+                          <td className="px-1.5 py-2 text-[10px] font-bold text-gray-600 leading-tight">{monthKeyLabel(monthKey)}<br/>Total</td>
+                          {STAFF.map(s => {
+                            const mins = allRecords
+                              .filter(r => r.staff_name === s && r.work_date.startsWith(monthKey) && r.actual_in && r.actual_out)
+                              .reduce((sum, r) => {
+                                const tin = parseTimeMins(r.actual_in), tout = parseTimeMins(r.actual_out)
+                                if (tin == null || tout == null) return sum
+                                return sum + (tout >= tin ? tout - tin : (tout + 1440) - tin)
+                              }, 0)
+                            return (
+                              <td key={s} className="text-center px-0.5 py-2 text-[10px] font-bold text-gray-700">
+                                {mins ? minsToHrs(mins) : '—'}
+                              </td>
+                            )
+                          })}
+                        </tr>
+                      )}
+                      <tr className="hover:bg-gray-50">
+                        <td className="px-1.5 py-1.5 text-gray-600 leading-tight">{fmtShortDate(date)}</td>
+                        {STAFF.map(s => {
+                          const record = allRecords.find(r => r.staff_name === s && r.work_date === date)
+                          const cellData = map[s]
+                          const isEditing = adminEditRow?.id === record?.id
+                          return (
+                            <td key={s} className="px-0.5 py-1 text-center">
+                              {isEditing ? (
+                                <div className="flex flex-col gap-0.5">
+                                  <input value={adminEditIn} onChange={e => setAdminEditIn(e.target.value)}
+                                    placeholder="in"
+                                    className="w-full text-[9px] border border-blue-300 rounded px-1 py-0.5 text-center outline-none" />
+                                  <input value={adminEditOut} onChange={e => setAdminEditOut(e.target.value)}
+                                    placeholder="out"
+                                    className="w-full text-[9px] border border-blue-300 rounded px-1 py-0.5 text-center outline-none" />
+                                  <div className="flex gap-0.5">
+                                    <button onClick={adminSaveEdit} disabled={adminEditSaving}
+                                      className="flex-1 text-[8px] font-bold bg-green-600 text-white rounded py-0.5 disabled:opacity-40">
+                                      {adminEditSaving ? '…' : '✓'}
+                                    </button>
+                                    <button onClick={() => record && adminDelete(record)} title="Delete"
+                                      className="text-[8px] font-bold bg-red-50 text-red-500 rounded py-0.5 px-1">✕</button>
+                                    <button onClick={() => setAdminEditRow(null)}
+                                      className="flex-1 text-[8px] font-bold bg-gray-100 text-gray-600 rounded py-0.5">—</button>
+                                  </div>
+                                </div>
+                              ) : record ? (
+                                <button
+                                  onClick={() => { setAdminEditRow(record); setAdminEditIn(record.actual_in ?? ''); setAdminEditOut(record.actual_out ?? '') }}
+                                  className="w-full rounded-lg hover:bg-blue-50 py-0.5 transition">
+                                  <div className="flex flex-col items-center leading-tight">
+                                    <span className="text-green-700">{cellData?.in ?? <span className="text-gray-300">—</span>}</span>
+                                    <span className="text-orange-600">{cellData?.out ?? <span className="text-gray-300">—</span>}</span>
+                                  </div>
+                                </button>
+                              ) : (
+                                <span className="text-gray-200">—</span>
+                              )}
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    </Fragment>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )
+      })() : (
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           <table className="w-full text-[11px] table-fixed">
             <thead className="bg-gray-50 border-b border-gray-200">
