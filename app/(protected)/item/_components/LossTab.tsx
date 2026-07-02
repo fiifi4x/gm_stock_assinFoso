@@ -562,6 +562,8 @@ export default function LossTab({ onOpenItem: _onOpenItem, search = '', group = 
     return list
   }, [rows, search, group, productType, sort])
 
+  const expandedRow = useMemo(() => rows.find(r => r.item_id === expandedId) ?? null, [rows, expandedId])
+
   if (loading) return <div className="py-20 text-center text-gray-400 text-xs">Loading…</div>
 
   const thProps = { sort, onSort: handleSort }
@@ -618,7 +620,7 @@ export default function LossTab({ onOpenItem: _onOpenItem, search = '', group = 
               const lossQty = row.lgQty > 0, gainQty = row.lgQty < 0
               const soh = parseFloat(row.soh ?? '0') || 0
               const isOpen = expandedId === row.item_id
-              return <>
+              return (
                 <tr key={row.item_id}
                   onClick={() => { setExpandedId(isOpen ? null : row.item_id); setEditTriggerId(null) }}
                   className={`cursor-pointer transition
@@ -662,28 +664,29 @@ export default function LossTab({ onOpenItem: _onOpenItem, search = '', group = 
                     </button>
                   </td>
                 </tr>
-                {isOpen && (
-                  <tr key={`${row.item_id}-d`}>
-                    <td colSpan={16} className="px-1 pb-2 pt-0.5 bg-blue-50">
-                      <ItemDetail item={row} groups={groupNames}
-                        currentAliases={aliasRecords[row.item_id] ?? []}
-                        currentMatches={matchRecords[row.item_name.trim().toLowerCase()] ?? []}
-                        candidatePool={row.product_type === 'service' ? goodsPool : servicesPool}
-                        autoEdit={editTriggerId === row.item_id}
-                        onSaved={u => patchRow(row.item_id, u)}
-                        onRelationsSaved={(newAliases, newMatches) => {
-                          setAliasRecords(prev => ({ ...prev, [row.item_id]: newAliases }))
-                          setMatchRecords(prev => ({ ...prev, [row.item_name.trim().toLowerCase()]: newMatches }))
-                          setEditTriggerId(null)
-                        }} />
-                    </td>
-                  </tr>
-                )}
-              </>
+              )
             })}
           </tbody>
         </table>
       </div>
+
+      {/* Expanded item detail — rendered outside the wide scrollable table so it
+          fits a phone screen instead of inheriting the summary table's column width */}
+      {expandedRow && (
+        <div className="shrink-0 max-h-[50vh] overflow-y-auto px-0.5 pt-1">
+          <ItemDetail item={expandedRow} groups={groupNames}
+            currentAliases={aliasRecords[expandedRow.item_id] ?? []}
+            currentMatches={matchRecords[expandedRow.item_name.trim().toLowerCase()] ?? []}
+            candidatePool={expandedRow.product_type === 'service' ? goodsPool : servicesPool}
+            autoEdit={editTriggerId === expandedRow.item_id}
+            onSaved={u => patchRow(expandedRow.item_id, u)}
+            onRelationsSaved={(newAliases, newMatches) => {
+              setAliasRecords(prev => ({ ...prev, [expandedRow.item_id]: newAliases }))
+              setMatchRecords(prev => ({ ...prev, [expandedRow.item_name.trim().toLowerCase()]: newMatches }))
+              setEditTriggerId(null)
+            }} />
+        </div>
+      )}
     </div>
   )
 }
