@@ -180,16 +180,25 @@ async function generateMonthFromTimes(startDate, endDate, payMonth, periodLabel)
   }
   // Joe: flat ₵2,000 from June 2026, hourly before that
   if (payMonth >= JOE_FLAT_FROM) {
+    // Joe: keep full pay structure, top up to ₵2,000 with childcare allowance
+    const joeHours   = minsToHrs(staffMins['Joe'] ?? 0)
+    const joePayHrs  = parseFloat((joeHours * HOURLY).toFixed(2))
+    const joeLong    = LONG_DAYS['Joe']
+    const joePayLong = parseFloat((joeLong * LONG_RATE).toFixed(2))
+    const joeComponents = joePayHrs + joePayLong + DUTY + DATA
+    const joeChildcare  = parseFloat(Math.max(0, 2000 - joeComponents).toFixed(2))
+    const joeTotal      = parseFloat((joeComponents + joeChildcare).toFixed(2))
     await sql`
       INSERT INTO payslips (staff_name,pay_month,payment_period,hours_worked,pay_for_hours,
-        overtime_hours,pay_for_overtime,longevity_days,pay_for_longevity,duty_allowance,data_allowance,ssnit,total_salary)
-      VALUES ('Joe',${payMonth},${periodLabel},null,null,null,null,null,null,null,null,null,2000)
+        overtime_hours,pay_for_overtime,longevity_days,pay_for_longevity,duty_allowance,data_allowance,ssnit,childcare_allowance,total_salary)
+      VALUES ('Joe',${payMonth},${periodLabel},${joeHours},${joePayHrs},
+        0,0,${joeLong},${joePayLong},${DUTY},${DATA},null,${joeChildcare},${joeTotal})
       ON CONFLICT (staff_name, pay_month) DO UPDATE SET
-        hours_worked=null, pay_for_hours=null, longevity_days=null,
-        pay_for_longevity=null, duty_allowance=null, data_allowance=null,
-        overtime_hours=null, pay_for_overtime=null, total_salary=2000
+        hours_worked=${joeHours}, pay_for_hours=${joePayHrs}, longevity_days=${joeLong},
+        pay_for_longevity=${joePayLong}, duty_allowance=${DUTY}, data_allowance=${DATA},
+        overtime_hours=0, pay_for_overtime=0, childcare_allowance=${joeChildcare}, total_salary=${joeTotal}
     `
-    console.log(`   ✓ Joe        flat  ${fmt(2000)}`)
+    console.log(`   ✓ Joe        ${joeHours.toFixed(2)}h + childcare ₵${joeChildcare}  = ${fmt(joeTotal)}`)
   } else {
     const joeHours = minsToHrs(staffMins['Joe'] ?? 0)
     const joePayHrs = parseFloat((joeHours * HOURLY).toFixed(2))

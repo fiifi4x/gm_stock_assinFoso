@@ -163,7 +163,8 @@ type Payslip = {
   id: number; staff_name: string; pay_month: string; payment_period: string | null
   hours_worked: string | null; pay_for_hours: string | null; overtime_hours: string | null
   pay_for_overtime: string | null; longevity_days: string | null; pay_for_longevity: string | null
-  duty_allowance: string | null; data_allowance: string | null; ssnit: string | null; total_salary: string | null
+  duty_allowance: string | null; data_allowance: string | null; ssnit: string | null
+  childcare_allowance: string | null; total_salary: string | null
 }
 
 type Violation = {
@@ -712,16 +713,17 @@ function monthLabelFull(d: string) {
 }
 
 const PAY_COLS = [
-  { key: 'hours_worked',     label: 'Hours',  fmt: (v: any) => v ? `${parseFloat(v).toFixed(1)}h` : '—' },
-  { key: 'pay_for_hours',    label: '₵ Hrs',  fmt: fmtC },
-  { key: 'overtime_hours',   label: 'OT h',   fmt: (v: any) => v && parseFloat(v) > 0 ? parseFloat(v).toFixed(1)+'h' : '—' },
-  { key: 'pay_for_overtime', label: '₵ OT',   fmt: fmtC },
-  { key: 'longevity_days',   label: 'L.Days', fmt: numF },
-  { key: 'pay_for_longevity',label: '₵ Long', fmt: fmtC },
-  { key: 'duty_allowance',   label: 'Duty',   fmt: fmtC },
-  { key: 'data_allowance',   label: 'Data',   fmt: fmtC },
-  { key: 'ssnit',            label: 'SSNIT',  fmt: fmtC },
-  { key: 'total_salary',     label: 'TOTAL',  fmt: fmtC },
+  { key: 'hours_worked',        label: 'Hours',     fmt: (v: any) => v ? `${parseFloat(v).toFixed(1)}h` : '—' },
+  { key: 'pay_for_hours',       label: '₵ Hrs',     fmt: fmtC },
+  { key: 'overtime_hours',      label: 'OT h',      fmt: (v: any) => v && parseFloat(v) > 0 ? parseFloat(v).toFixed(1)+'h' : '—' },
+  { key: 'pay_for_overtime',    label: '₵ OT',      fmt: fmtC },
+  { key: 'longevity_days',      label: 'L.Days',    fmt: numF },
+  { key: 'pay_for_longevity',   label: '₵ Long',    fmt: fmtC },
+  { key: 'duty_allowance',      label: 'Duty',      fmt: fmtC },
+  { key: 'data_allowance',      label: 'Data',      fmt: fmtC },
+  { key: 'childcare_allowance', label: 'Childcare', fmt: fmtC },
+  { key: 'ssnit',               label: 'SSNIT',     fmt: fmtC },
+  { key: 'total_salary',        label: 'TOTAL',      fmt: fmtC },
 ] as const
 
 const ALL_STAFF_NAMES = ['Joe', 'Bino', 'James', 'Rawlings', 'Grony']
@@ -758,7 +760,7 @@ function detectPayFlags(payslips: Payslip[]): PayFlag[] {
 
     // Component sum ≠ stored total (only if all components are present)
     const total = p.total_salary != null ? parseFloat(p.total_salary) : null
-    const computed = [p.pay_for_hours, p.pay_for_overtime, p.pay_for_longevity, p.duty_allowance, p.data_allowance]
+    const computed = [p.pay_for_hours, p.pay_for_overtime, p.pay_for_longevity, p.duty_allowance, p.data_allowance, p.childcare_allowance]
       .reduce((s, v) => s + (v != null ? parseFloat(v) : 0), 0)
     if (total !== null && computed > 0 && Math.abs(total - computed) > 0.10) {
       flags.push({
@@ -913,6 +915,9 @@ function PayslipsTab() {
                           )}
                           <div className="flex justify-between"><span>Longevity</span><span className="font-medium text-gray-700">{p.longevity_days ? `${p.longevity_days}d / ${fmtC(p.pay_for_longevity)}` : '—'}</span></div>
                           <div className="flex justify-between"><span>Duty + Data</span><span className="font-medium text-gray-700">{fmtC(p.duty_allowance)} + {fmtC(p.data_allowance)}</span></div>
+                          {p.childcare_allowance && parseFloat(p.childcare_allowance) > 0 && (
+                            <div className="flex justify-between"><span>Childcare</span><span className="font-medium text-pink-600">{fmtC(p.childcare_allowance)}</span></div>
+                          )}
                         </div>
                       )}
                     </button>
