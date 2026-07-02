@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
+import { Fragment, useState, useEffect, useMemo } from 'react'
 import { fmtDate } from '@/lib/fmtDate'
 
 /* ── types ── */
@@ -578,7 +578,8 @@ export default function LossTab({ onOpenItem: _onOpenItem, search = '', group = 
     const soh = parseFloat(row.soh ?? '0') || 0
     const isOpen = expandedId === row.item_id
     return (
-      <tr key={row.item_id}
+      <Fragment key={row.item_id}>
+      <tr
         onClick={() => { setExpandedId(isOpen ? null : row.item_id); setEditTriggerId(null) }}
         className={`cursor-pointer transition
           ${isOpen ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
@@ -621,13 +622,35 @@ export default function LossTab({ onOpenItem: _onOpenItem, search = '', group = 
           </button>
         </td>
       </tr>
+      {isOpen && (
+        <tr>
+          {/* colSpan makes this cell as wide as the scrollable table, but the inner
+              wrapper is sticky-pinned to the left edge and capped to the visible
+              viewport width (like the frozen Item column above), so the detail
+              table renders at phone width directly under the row that opened it.
+              The cell itself has no background of its own, so whatever part of it
+              sits past the sticky content just blends into the page instead of
+              showing as a visible bar. */}
+          <td colSpan={16} className="p-0 border border-black">
+            <div className="sticky left-0 w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] max-h-[50vh] overflow-y-auto bg-blue-50 px-0.5 pb-2 pt-0.5">
+              <ItemDetail item={row} groups={groupNames}
+                currentAliases={aliasRecords[row.item_id] ?? []}
+                currentMatches={matchRecords[row.item_name.trim().toLowerCase()] ?? []}
+                candidatePool={row.product_type === 'service' ? goodsPool : servicesPool}
+                autoEdit={editTriggerId === row.item_id}
+                onSaved={u => patchRow(row.item_id, u)}
+                onRelationsSaved={(newAliases, newMatches) => {
+                  setAliasRecords(prev => ({ ...prev, [row.item_id]: newAliases }))
+                  setMatchRecords(prev => ({ ...prev, [row.item_name.trim().toLowerCase()]: newMatches }))
+                  setEditTriggerId(null)
+                }} />
+            </div>
+          </td>
+        </tr>
+      )}
+      </Fragment>
     )
   }
-
-  const expandedIndex = filtered.findIndex(r => r.item_id === expandedId)
-  const expandedRow = expandedIndex === -1 ? null : filtered[expandedIndex]
-  const beforeRows = expandedIndex === -1 ? filtered : filtered.slice(0, expandedIndex + 1)
-  const afterRows = expandedIndex === -1 ? [] : filtered.slice(expandedIndex + 1)
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -659,37 +682,9 @@ export default function LossTab({ onOpenItem: _onOpenItem, search = '', group = 
             {filtered.length === 0 && (
               <tr><td colSpan={16} className="py-10 text-center text-gray-400 text-[9px]">No items</td></tr>
             )}
-            {beforeRows.map(renderRow)}
+            {filtered.map(renderRow)}
           </tbody>
         </table>
-
-        {/* Expanded item detail — a plain block (not a table cell) so it renders at
-            phone width with no leftover cell background, sticky-pinned to the left
-            edge so it stays visible however far the table above is scrolled right. */}
-        {expandedRow && (
-          <div className="sticky left-0 w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] max-h-[50vh] overflow-y-auto bg-blue-50 px-0.5 pb-2 pt-0.5 border-x border-b border-black">
-            <ItemDetail item={expandedRow} groups={groupNames}
-              currentAliases={aliasRecords[expandedRow.item_id] ?? []}
-              currentMatches={matchRecords[expandedRow.item_name.trim().toLowerCase()] ?? []}
-              candidatePool={expandedRow.product_type === 'service' ? goodsPool : servicesPool}
-              autoEdit={editTriggerId === expandedRow.item_id}
-              onSaved={u => patchRow(expandedRow.item_id, u)}
-              onRelationsSaved={(newAliases, newMatches) => {
-                setAliasRecords(prev => ({ ...prev, [expandedRow.item_id]: newAliases }))
-                setMatchRecords(prev => ({ ...prev, [expandedRow.item_name.trim().toLowerCase()]: newMatches }))
-                setEditTriggerId(null)
-              }} />
-          </div>
-        )}
-
-        {afterRows.length > 0 && (
-          <table className="table-fixed border-collapse text-[8px]">
-            {colgroup}
-            <tbody>
-              {afterRows.map(renderRow)}
-            </tbody>
-          </table>
-        )}
       </div>
     </div>
   )
