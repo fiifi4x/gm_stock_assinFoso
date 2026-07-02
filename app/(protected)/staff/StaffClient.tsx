@@ -185,7 +185,7 @@ function groupByDate(rows: RecentRow[]) {
 }
 
 function TimesTab({ username, role }: { username: string; role: string }) {
-  const isAdmin = role === 'owner' || role === 'admin' || username === 'rawlings' || username === 'grony'
+  const isAdmin = role === 'owner' || role === 'admin' || username === 'rawlings' || username === 'grony' || username === 'joe'
 
   const [today, setToday] = useState<TodayRow[]>([])
   const [mine, setMine] = useState<Mine>(null)
@@ -1155,7 +1155,7 @@ const VIOLATION_ICONS: Record<ViolationView, React.ReactNode> = {
 }
 
 function ViolationsTab({ role, username, vtab, setVtab }: { role: string; username: string; vtab: ViolationView; setVtab: (v: ViolationView) => void }) {
-  const isAdmin = role === 'owner' || role === 'admin' || username === 'rawlings' || username === 'grony'
+  const isAdmin = role === 'owner' || role === 'admin' || username === 'rawlings' || username === 'grony' || username === 'joe'
   const PAYSLIP_MONTHS = ['2026-04', '2026-05']
   const PAYSLIP_MONTH_LABELS: Record<string, string> = { '2026-04': 'April 2026', '2026-05': 'May 2026' }
 
@@ -1217,7 +1217,7 @@ function ViolationsTab({ role, username, vtab, setVtab }: { role: string; userna
     setViolations(prev => prev.filter(v => v.id !== id))
   }
 
-  const canManage = ['owner', 'manager'].includes(role)
+  const canManage = ['owner', 'manager'].includes(role) || username === 'joe'
   const filtered = staffFilter === 'All' ? violations : violations.filter(v => v.staff_name.toLowerCase() === staffFilter.toLowerCase())
 
   const leaderboard = useMemo(() => {
@@ -2205,13 +2205,13 @@ const VIOLATION_TYPES: { type: string; label: string; auto: boolean }[] = [
   { type: 'not_in_inventory', label: 'Item names not found in inventory', auto: false },
 ]
 
-function AssignmentsTab({ role }: { role: string }) {
+function AssignmentsTab({ role, username }: { role: string; username: string }) {
   const [assignments, setAssignments] = useState<Record<string, string>>({})
   const [settings, setSettings] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
   const [error, setError] = useState('')
-  const canManage = ['owner', 'manager'].includes(role)
+  const canManage = ['owner', 'manager'].includes(role) || username === 'joe'
 
   function load() {
     fetch('/api/violations/assignments')
@@ -2359,7 +2359,7 @@ function StaffClientInner({ role, username, embedded }: { role: string; username
       {tab === 'Role' && <RoleTab role={role} />}
       {tab === 'Rota' && <RotaTab />}
       {tab === 'Analytics' && <AnalyticsTab />}
-      {tab === 'Assignments' && <AssignmentsTab role={role} />}
+      {tab === 'Assignments' && <AssignmentsTab role={role} username={username} />}
     </div>
   )
 }
