@@ -563,8 +563,8 @@ export default function LossTab({ onOpenItem: _onOpenItem, search = '', group = 
       <col style={{width:'26px'}} />
       <col style={{width:'30px'}} />
       <col style={{width:'26px'}} />
-      <col style={{width:'22px'}} />
-      <col style={{width:'22px'}} />
+      <col style={{width:'56px'}} />
+      <col style={{width:'50px'}} />
       <col style={{width:'18px'}} />
       <col style={{width:'220px'}} />
       <col style={{width:'220px'}} />
@@ -599,10 +599,10 @@ export default function LossTab({ onOpenItem: _onOpenItem, search = '', group = 
         </td>
         <td className="text-center py-0.5 font-bold text-blue-600 tabular-nums border border-black">{fmtCcy(row.sp)}</td>
         <td className="text-center py-0.5 font-bold text-green-600 tabular-nums border border-black">{fmtCcy(row.cp)}</td>
-        <td className="text-center py-0.5 font-bold text-gray-500 border border-black" title={row.cf_group ?? undefined}>{(row.cf_group ?? '—').slice(0, 3)}</td>
+        <td className="text-center py-0.5 font-bold text-gray-500 truncate border border-black" title={row.cf_group ?? undefined}>{row.cf_group ?? '—'}</td>
         <td className={`text-center py-0.5 font-bold border border-black ${row.product_type === 'service' ? 'text-purple-500' : 'text-teal-600'}`}
           title={row.product_type === 'service' ? 'Service' : 'Good'}>
-          {row.product_type === 'service' ? 'Svc' : 'Goo'}
+          {row.product_type === 'service' ? 'Service' : 'Good'}
         </td>
         <td className="text-center py-0.5 font-bold text-gray-400 border border-black">{isOpen ? '▾' : '▸'}</td>
         <td className="pl-1.5 py-0.5 font-bold text-gray-500 truncate overflow-hidden border border-black"
@@ -647,8 +647,8 @@ export default function LossTab({ onOpenItem: _onOpenItem, search = '', group = 
               <SortTh label="SOH" col="soh" {...thProps} cls="text-center" />
               <SortTh label="SP" col="sp" {...thProps} cls="text-center" />
               <SortTh label="CP" col="cp" {...thProps} cls="text-center" />
-              <SortTh label="Grp" col="cf_group" {...thProps} cls="text-center" />
-              <SortTh label="Typ" col="product_type" {...thProps} cls="text-center" />
+              <SortTh label="Group" col="cf_group" {...thProps} cls="text-center" />
+              <SortTh label="Type" col="product_type" {...thProps} cls="text-center" />
               <th className={`${thBase} text-center text-gray-400`}>▸</th>
               <th className={`${thBase} text-left pl-1.5`}>Aliases</th>
               <th className={`${thBase} text-left pl-1.5`}>Matches</th>
